@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BINGO BƠ HOUSE GAME</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+
+<body>
+    <header class="cyber-header">
+        <h1>BINGO BƠ HOUSE GAME</h1>
+        <div class="header-controls">
+            <div class="theme-selector">
+                <button class="theme-btn" data-theme="cyan" style="--theme-color: #00f2fe;" title="Chủ đề Cyan"></button>
+                <button class="theme-btn" data-theme="purple" style="--theme-color: #9d4edd;" title="Chủ đề Tím"></button>
+                <button class="theme-btn" data-theme="amber" style="--theme-color: #ffb703;" title="Chủ đề Vàng"></button>
+            </div>
+            <button id="toggle-sound-btn" class="cyber-button sound-toggle-btn" title="Bật/Tắt Âm thanh">🔊</button>
+        </div>
+    </header>
+
+    <main class="game-container">
+        <!-- Host Caller Panel -->
+        <section id="caller-panel" class="panel glassmorphism">
+            <h2 class="panel-title">Bộ Quay Số Chủ Trì</h2>
+            <div class="caller-display">
+                <div class="sphere-container">
+                    <div id="called-number-sphere" class="sphere">
+                        <span id="current-called-number">?</span>
+                    </div>
+                </div>
+                <button id="call-number-btn" class="cyber-button ripple" disabled>
+                    <span class="button-text">🎲 Quay Số Tiếp</span>
+                    <span class="button-icon"></span>
+                </button>
+            </div>
+            <div class="caller-info">
+                <p>Đã gọi: <span id="called-count">0</span>/25</p>
+                <h3>Lịch sử số đã quay:</h3>
+                <div id="called-numbers-history" class="history-list custom-scrollbar">
+                    <!-- Called numbers chips will be appended here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Bingo Board Arena -->
+        <section id="bingo-arena" class="panel glassmorphism">
+            <h2 class="panel-title">Bảng BINGO Của Bạn</h2>
+            <div class="board-controls">
+                <button id="new-game-btn" class="cyber-button ripple">
+                    <span class="button-text">🔄 Trò Chơi Mới</span>
+                    <span class="button-icon"></span>
+                </button>
+                <button id="random-fill-btn" class="cyber-button ripple">
+                    <span class="button-text">⚡ Random Điền Bảng</span>
+                    <span class="button-icon"></span>
+                </button>
+                <button id="lock-board-btn" class="cyber-button ripple">
+                    <span class="button-text">🔒 Khóa Bảng & Bắt Đầu</span>
+                    <span class="button-icon"></span>
+                </button>
+            </div>
+            <div class="bingo-grid-container">
+                <div id="bingo-grid" class="bingo-grid">
+                    <!-- Bingo cells will be generated here by JS -->
+                </div>
+                <svg id="bingo-lines-svg" class="bingo-lines-svg" viewBox="0 0 500 500">
+                    <!-- SVG lines will be drawn here by JS -->
+                </svg>
+            </div>
+            <div class="game-status">
+                <p>Đường hoàn thành: <span id="lines-completed-count-text">0</span>/12</p>
+                <div class="progress-bar-container">
+                    <div id="lines-progress-bar" class="progress-bar"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Victory Modal -->
+    <div id="victory-modal" class="modal-backdrop hidden">
+        <div class="modal-content glassmorphism">
+            <h2 class="modal-title">🏆 BINGO! VICTORY! 🏆</h2>
+            <p class="modal-message">Chúc mừng bạn đã hoàn thành 5 đường BINGO!</p>
+            <button id="reset-game-btn" class="cyber-button ripple">
+                <span class="button-text">🔄 Chơi Lại</span>
+                <span class="button-icon"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Application Script -->
+    <script src="app.js" type="module"></script>
+</body>
+
+</html>
