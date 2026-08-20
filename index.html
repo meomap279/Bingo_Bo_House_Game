@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#08111f">
     <title>BINGO BƠ HOUSE GAME</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,6 +17,7 @@
 </head>
 
 <body>
+    <div class="page-ambient" aria-hidden="true"></div>
     <!-- Auth / Multiplayer Modal -->
     <div id="main-modal" class="modal-backdrop visible">
         <div class="modal-content glassmorphism">
@@ -75,7 +77,11 @@
         </div>
     </div>
     <header class="cyber-header">
-        <h1>BINGO BƠ HOUSE GAME</h1>
+        <div class="brand-block">
+            <p class="eyebrow">Realtime Multiplayer</p>
+            <h1>BINGO BƠ HOUSE GAME</h1>
+            <p class="brand-subtitle">Đấu trí cùng bạn bè trên mọi thiết bị</p>
+        </div>
         <div class="header-controls">
             <div class="theme-selector">
                 <button class="theme-btn" data-theme="cyan" style="--theme-color: #00f2fe;" title="Chủ đề Cyan"></button>

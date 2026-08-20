@@ -406,11 +406,13 @@ function showVictoryModal(isWinner = true, winnerName = '') {
         DOMElements.resetGameBtn.querySelector('.button-text').textContent = 'OK';
     }
 
+    DOMElements.victoryModal.classList.remove('hidden');
     DOMElements.victoryModal.classList.add('visible');
 }
 
 function hideVictoryModal() {
     DOMElements.victoryModal.classList.remove('visible');
+    DOMElements.victoryModal.classList.add('hidden');
 }
 
 function showMultiplayerModal() {
@@ -425,11 +427,13 @@ function hideMultiplayerModal() {
 
 function openProfileModal() {
     DOMElements.profileAvatarPreview.src = (gameState.user && gameState.user.photoURL) || DEFAULT_AVATAR;
+    DOMElements.profileModal.classList.remove('hidden');
     DOMElements.profileModal.classList.add('visible');
 }
 
 function closeProfileModal() {
     DOMElements.profileModal.classList.remove('visible');
+    DOMElements.profileModal.classList.add('hidden');
 }
 
 function resetClientForNewRound() {
