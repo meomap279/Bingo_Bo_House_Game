@@ -16,6 +16,64 @@
 </head>
 
 <body>
+    <!-- Auth / Multiplayer Modal -->
+    <div id="main-modal" class="modal-backdrop visible">
+        <div class="modal-content glassmorphism">
+            <!-- Auth View -->
+            <div id="auth-view">
+                <h2 id="auth-title" class="modal-title">Đăng Nhập</h2>
+                <form id="auth-form">
+                    <input type="text" id="auth-username" placeholder="Tên hiển thị" class="hidden">
+                    <input type="email" id="auth-email" placeholder="Email" required>
+                    <input type="password" id="auth-password" placeholder="Mật khẩu (ít nhất 6 ký tự)" required>
+                    <p id="auth-error" class="error-message hidden"></p>
+                    <p id="auth-success" class="success-message hidden"></p>
+                    <div class="auth-buttons">
+                        <button type="submit" id="auth-submit-btn" class="cyber-button ripple">
+                            <span id="auth-submit-btn-text">Đăng Nhập</span>
+                            <span id="auth-submit-btn-loading" class="loading-spinner hidden"></span>
+                        </button>
+                    </div>
+                </form>
+                <p id="auth-toggle-text">Chưa có tài khoản? <span id="auth-toggle-link" class="link-style">Đăng ký ngay</span></p>
+            </div>
+
+            <!-- Lobby View (was Multiplayer View) -->
+            <div id="lobby-view" class="hidden">
+                <h2 class="modal-title">Chơi Cùng Bạn Bè</h2>
+                <div id="room-actions">
+                    <div class="room-setting-container">
+                        <label for="max-players-select">Số người chơi:</label>
+                        <select id="max-players-select" class="cyber-select">
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <button id="create-room-btn" class="cyber-button ripple">
+                        <span class="button-text">Tạo Phòng Mới</span>
+                    </button>
+                    <div class="join-room-section">
+                        <input type="text" id="room-code-input" placeholder="NHẬP MÃ PHÒNG" maxlength="5">
+                        <button id="join-room-btn" class="cyber-button ripple">
+                            <span class="button-text">Vào Phòng</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="room-info-display" class="hidden">
+                    <p>Mã phòng của bạn:</p>
+                    <div id="room-code-display">------</div>
+                    <div id="lobby-player-list-container">
+                        <h3>Người chơi trong phòng</h3>
+                        <div id="lobby-player-list" class="player-list custom-scrollbar"></div>
+                    </div>
+                    <p id="waiting-for-player-text">Đang chờ người chơi...</p>
+                    <button id="start-game-btn" class="cyber-button ripple hidden">Bắt Đầu Trận Đấu</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <header class="cyber-header">
         <h1>BINGO BƠ HOUSE GAME</h1>
         <div class="header-controls">
@@ -25,23 +83,59 @@
                 <button class="theme-btn" data-theme="amber" style="--theme-color: #ffb703;" title="Chủ đề Vàng"></button>
             </div>
             <button id="toggle-sound-btn" class="cyber-button sound-toggle-btn" title="Bật/Tắt Âm thanh">🔊</button>
+            <div id="user-profile-container" class="hidden">
+                <div id="user-info" title="Mở menu người dùng">
+                    <img id="user-avatar" src="" alt="Avatar" class="header-avatar">
+                    <span id="user-display-name"></span>
+                </div>
+                <div id="user-dropdown" class="glassmorphism hidden">
+                    <a id="view-profile-link" class="dropdown-item">👤 Hồ Sơ</a>
+                    <button id="logout-btn" class="dropdown-item">🚪 Đăng Xuất</button>
+                </div>
+            </div>
         </div>
     </header>
 
-    <main class="game-container">
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal-backdrop hidden">
+        <div class="modal-content glassmorphism">
+            <h2 class="modal-title">Hồ Sơ Của Bạn</h2>
+            <div class="profile-details">
+                <div class="avatar-upload-container">
+                    <img id="profile-avatar-preview" src="" alt="Avatar Preview" class="profile-avatar">
+                    <label for="avatar-upload-input" class="cyber-button ripple">
+                        <span>✏️ Thay đổi Avatar</span>
+                    </label>
+                    <input type="file" id="avatar-upload-input" class="hidden" accept="image/png, image/jpeg">
+                </div>
+                <p id="profile-upload-status" class="hidden"></p>
+            </div>
+            <button id="close-profile-modal-btn" class="cyber-button ripple">Đóng</button>
+        </div>
+    </div>
+
+    <main id="game-container" class="game-container hidden">
         <!-- Host Caller Panel -->
         <section id="caller-panel" class="panel glassmorphism">
             <h2 class="panel-title">Bộ Quay Số Chủ Trì</h2>
+            <div id="game-room-info" class="hidden room-info-header">
+                <div class="room-code-wrapper">
+                    Mã Phòng: <span id="game-room-code"></span>
+                </div>
+                <button id="leave-room-btn" class="cyber-button ripple small-btn">Rời Phòng</button>
+            </div>
             <div class="caller-display">
                 <div class="sphere-container">
                     <div id="called-number-sphere" class="sphere">
                         <span id="current-called-number">?</span>
                     </div>
                 </div>
-                <button id="call-number-btn" class="cyber-button ripple" disabled>
-                    <span class="button-text">🎲 Quay Số Tiếp</span>
-                    <span class="button-icon"></span>
-                </button>
+                <div id="turn-status-display" class="turn-status hidden">
+                    <p id="turn-status-text">Đang chờ người chơi...</p>
+                    <div id="turn-timer-container" class="hidden">
+                        <div id="turn-timer-bar"></div>
+                    </div>
+                </div>
             </div>
             <div class="caller-info">
                 <p>Đã gọi: <span id="called-count">0</span>/25</p>
@@ -50,12 +144,18 @@
                     <!-- Called numbers chips will be appended here -->
                 </div>
             </div>
+            <div id="player-list-container" class="hidden">
+                <h3>Người Chơi</h3>
+                <div id="player-list" class="player-list custom-scrollbar">
+                    <!-- Player items will be generated here by JS -->
+                </div>
+            </div>
         </section>
 
         <!-- Bingo Board Arena -->
         <section id="bingo-arena" class="panel glassmorphism">
             <h2 class="panel-title">Bảng BINGO Của Bạn</h2>
-            <div class="board-controls">
+            <div id="board-controls" class="board-controls">
                 <button id="new-game-btn" class="cyber-button ripple">
                     <span class="button-text">🔄 Trò Chơi Mới</span>
                     <span class="button-icon"></span>
@@ -89,14 +189,20 @@
     <!-- Victory Modal -->
     <div id="victory-modal" class="modal-backdrop hidden">
         <div class="modal-content glassmorphism">
-            <h2 class="modal-title">🏆 BINGO! VICTORY! 🏆</h2>
-            <p class="modal-message">Chúc mừng bạn đã hoàn thành 5 đường BINGO!</p>
+            <h2 id="game-over-title" class="modal-title">🏆 BINGO! VICTORY! 🏆</h2>
+            <p id="game-over-message" class="modal-message">Chúc mừng bạn đã hoàn thành 5 đường BINGO!</p>
             <button id="reset-game-btn" class="cyber-button ripple">
                 <span class="button-text">🔄 Chơi Lại</span>
                 <span class="button-icon"></span>
             </button>
         </div>
     </div>
+
+    <!-- Firebase SDKs (Compat version for easier integration) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
 
     <!-- Main Application Script -->
     <script src="app.js" type="module"></script>

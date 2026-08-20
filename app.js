@@ -1,13 +1,38 @@
 // app.js - Main Application Logic
 
+// --- 0. Firebase Configuration ---
+const firebaseConfig = {
+    apiKey: "AIzaSyBK5F_J8BUK2910FLgd8eEeExi5yiLkd-8",
+    authDomain: "bingo-bo-house-game-app.firebaseapp.com",
+    // URL đã được cập nhật theo đúng khu vực của database (asia-southeast1)
+    databaseURL: "https://bingo-bo-house-game-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "bingo-bo-house-game-app",
+    storageBucket: "bingo-bo-house-game-app.appspot.com",
+    messagingSenderId: "191092820571",
+    appId: "1:191092820571:web:3fe27176ed42bc67a0cd7e"
+};
+
+// Khởi tạo Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const auth = firebase.auth();
+const storage = firebase.storage();
+
 // --- 1. State Management ---
 const gameState = {
+    user: null, // Will hold Firebase user object { uid, email, displayName }
+    playerId: null, // Will be set to user.uid after login
+    roomCode: null, // Mã phòng hiện tại
+    currentTurnPlayerId: null, // ID của người chơi đang có lượt
+    knownPlayerIds: new Set(), // Players we already know about in the current room
+    playerRole: null, // 'host' hoặc 'guest'
     bingoBoard: Array(25).fill(null), // Stores numbers 1-25
     selectedCells: Array(25).fill(false), // True if cell is marked
     calledNumbers: new Set(), // Numbers already called by the host
     isBoardLocked: false,
     linesCompleted: new Set(), // Stores indices of completed lines (0-11)
     totalLinesCompleted: 0,
+    roomStatus: null, // 'waiting', 'playing', 'finished'
     isGameOver: false,
     isMuted: false,
     theme: 'cyan', // Default theme
@@ -18,13 +43,60 @@ const BINGO_SIZE = 5;
 const TOTAL_CELLS = BINGO_SIZE * BINGO_SIZE;
 const MIN_NUMBER = 1;
 const MAX_NUMBER = 25;
+const TURN_DURATION = 15; // 15 seconds
+const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2UwZTBlMCI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTN6bTAgMTRjLTIuNjcgMC01LTEuMjgtNi42Ny0zLjIyLjI1LS45OCAyLjUyLTEuNzggNC4xNy0yLjE0QzEwLjUgMTMuOCAxMS4yMyAxNCAxMiAxNHMxLjUtLjIgMi41LS41N2MxLjY1LjM2IDMuOTIgMS4xNiA0LjE3IDIuMTRDMTcgMTcuNzIgMTQuNjcgMTkgMTIgMTl6Ii8+PC9wYXRoPjwvc3ZnPg==';
 
 const DOMElements = {
+    // Main Modal & Views
+    mainModal: document.getElementById('main-modal'),
+    authView: document.getElementById('auth-view'),
+    lobbyView: document.getElementById('lobby-view'),
+    // Auth Form
+    authForm: document.getElementById('auth-form'),
+    authTitle: document.getElementById('auth-title'),
+    authUsernameInput: document.getElementById('auth-username'),
+    authEmailInput: document.getElementById('auth-email'),
+    authPasswordInput: document.getElementById('auth-password'),
+    authError: document.getElementById('auth-error'),
+    authSubmitBtn: document.getElementById('auth-submit-btn'),
+    authToggleText: document.getElementById('auth-toggle-text'),
+    authSubmitBtnText: document.getElementById('auth-submit-btn-text'),
+    authSubmitBtnLoading: document.getElementById('auth-submit-btn-loading'),
+    authSuccess: document.getElementById('auth-success'),
+    // Lobby
+    createRoomBtn: document.getElementById('create-room-btn'),
+    joinRoomBtn: document.getElementById('join-room-btn'),
+    roomCodeInput: document.getElementById('room-code-input'),
+    maxPlayersSelect: document.getElementById('max-players-select'),
+    roomActions: document.getElementById('room-actions'),
+    roomInfoDisplay: document.getElementById('room-info-display'),
+    waitingForPlayerText: document.getElementById('waiting-for-player-text') || document.createElement('span'),
+    lobbyPlayerListContainer: document.getElementById('lobby-player-list-container'),
+    lobbyPlayerList: document.getElementById('lobby-player-list'),
+    startGameBtn: document.getElementById('start-game-btn'),
+    roomCodeDisplay: document.getElementById('room-code-display'),
+    leaveRoomBtn: document.getElementById('leave-room-btn'),
+    // In-Game Info
+    gameRoomInfo: document.getElementById('game-room-info'),
+    gameRoomCode: document.getElementById('game-room-code'),
+    playerListContainer: document.getElementById('player-list-container'),
+    turnStatusDisplay: document.getElementById('turn-status-display'),
+    turnStatusText: document.getElementById('turn-status-text'),
+    turnTimerContainer: document.getElementById('turn-timer-container'),
+    turnTimerBar: document.getElementById('turn-timer-bar'),
+    playerList: document.getElementById('player-list'),
+    // Profile Modal
+    profileModal: document.getElementById('profile-modal'),
+    closeProfileModalBtn: document.getElementById('close-profile-modal-btn'),
+    profileAvatarPreview: document.getElementById('profile-avatar-preview'),
+    avatarUploadInput: document.getElementById('avatar-upload-input'),
+    profileUploadStatus: document.getElementById('profile-upload-status'),
+    // Game elements
     bingoGrid: document.getElementById('bingo-grid'),
+    boardControls: document.getElementById('board-controls'),
     newGameBtn: document.getElementById('new-game-btn'),
     randomFillBtn: document.getElementById('random-fill-btn'),
     lockBoardBtn: document.getElementById('lock-board-btn'),
-    callNumberBtn: document.getElementById('call-number-btn'),
     currentCalledNumber: document.getElementById('current-called-number'),
     calledNumberSphere: document.getElementById('called-number-sphere'),
     calledCount: document.getElementById('called-count'),
@@ -32,11 +104,22 @@ const DOMElements = {
     linesCompletedCount: document.getElementById('lines-completed-count'),
     bingoLinesSVG: document.getElementById('bingo-lines-svg'),
     victoryModal: document.getElementById('victory-modal'),
+    gameOverTitle: document.getElementById('game-over-title'),
+    gameOverMessage: document.getElementById('game-over-message'),
     resetGameBtn: document.getElementById('reset-game-btn'),
     toggleSoundBtn: document.getElementById('toggle-sound-btn'),
     themeSelector: document.querySelector('.theme-selector'),
     linesCompletedCountText: document.getElementById('lines-completed-count-text'),
     linesProgressBar: document.getElementById('lines-progress-bar'),
+    gameContainer: document.getElementById('game-container'),
+    // User display
+    userProfileContainer: document.getElementById('user-profile-container'),
+    userAvatar: document.getElementById('user-avatar'),
+    userInfo: document.getElementById('user-info'),
+    userDisplayName: document.getElementById('user-display-name'),
+    userDropdown: document.getElementById('user-dropdown'),
+    viewProfileLink: document.getElementById('view-profile-link'),
+    logoutBtn: document.getElementById('logout-btn'),
 };
 
 // Define the 12 winning lines (indices of cells 0-24)
@@ -77,6 +160,9 @@ const THEMES = {
     },
 };
 
+let isRegisterMode = false;
+let turnTimerInterval;
+
 function applyTheme(themeName) {
     const theme = THEMES[themeName] || THEMES.cyan;
     Object.entries(theme).forEach(([key, value]) => {
@@ -97,12 +183,9 @@ class AudioManager {
 
     // Method to mute/unmute all sounds
     setMute(isMuted) {
-        // Cancel any pending audio param changes and set the value immediately.
-        // This is more robust than setTargetAtTime when dealing with a context that might be suspended.
         const now = this.audioContext.currentTime;
         this.gainNode.gain.cancelScheduledValues(now);
         const targetVolume = isMuted ? 0 : this.masterVolume;
-        // Use a very short ramp to avoid clicks but apply the change quickly and robustly.
         this.gainNode.gain.linearRampToValueAtTime(targetVolume, now + 0.01);
     }
 
@@ -126,8 +209,8 @@ class AudioManager {
     }
 
     playPopSound() {
-        this._playTone(880, 0.1, 'sine', 0.005, 0.05, 0.8, 0.05); // High frequency, short pop
-        this._playTone(1320, 0.1, 'sine', 0.005, 0.05, 0.6, 0.05); // Higher harmonic
+        this._playTone(880, 0.1, 'sine', 0.005, 0.05, 0.8, 0.05);
+        this._playTone(1320, 0.1, 'sine', 0.005, 0.05, 0.6, 0.05);
     }
 
     playLaserSound() {
@@ -137,8 +220,8 @@ class AudioManager {
 
         oscillator.type = 'sawtooth';
         oscillator.frequency.setValueAtTime(400, startTime);
-        oscillator.frequency.exponentialRampToValueAtTime(1200, startTime + 0.3); // Swoosh up
-        oscillator.frequency.exponentialRampToValueAtTime(200, startTime + 0.6); // Swoosh down
+        oscillator.frequency.exponentialRampToValueAtTime(1200, startTime + 0.3);
+        oscillator.frequency.exponentialRampToValueAtTime(200, startTime + 0.6);
 
         gain.gain.setValueAtTime(0.5, startTime);
         gain.gain.linearRampToValueAtTime(0.1, startTime + 0.6);
@@ -175,8 +258,6 @@ class AudioManager {
 const audioManager = new AudioManager();
 
 // --- 4. Utility Functions ---
-
-// New functions for Local Storage
 const STORAGE_KEY = 'bingoGameState';
 
 function saveState() {
@@ -198,7 +279,6 @@ function loadState() {
         if (!savedStateJSON) return null;
 
         const savedState = JSON.parse(savedStateJSON);
-        // Re-hydrate Sets from arrays
         return {
             ...savedState,
             calledNumbers: new Set(savedState.calledNumbers),
@@ -206,7 +286,7 @@ function loadState() {
         };
     } catch (e) {
         console.error("Failed to load game state:", e);
-        localStorage.removeItem(STORAGE_KEY); // Clear corrupted data
+        localStorage.removeItem(STORAGE_KEY);
         return null;
     }
 }
@@ -223,23 +303,15 @@ function shuffleArray(array) {
 // Ripple effect for buttons
 function applyRippleEffect(event) {
     const button = event.currentTarget;
-
-    // The original JS for the ripple effect did not match the CSS.
-    // This corrected version adds the 'animate' class to the button itself,
-    // which is what the CSS in style.css expects to trigger the ::after pseudo-element.
     button.classList.add('animate');
-
-    // Remove the class after the animation duration (0.7s from CSS transition)
-    // so the animation can be re-triggered on subsequent clicks.
     setTimeout(() => {
         button.classList.remove('animate');
     }, 700);
 }
 
 // --- 5. UI Rendering & Updates ---
-
 function renderBingoGrid() {
-    DOMElements.bingoGrid.innerHTML = ''; // Clear existing grid
+    DOMElements.bingoGrid.innerHTML = '';
     for (let i = 0; i < TOTAL_CELLS; i++) {
         const cell = document.createElement('div');
         cell.classList.add('bingo-cell');
@@ -250,8 +322,8 @@ function renderBingoGrid() {
         input.min = MIN_NUMBER;
         input.max = MAX_NUMBER;
         input.value = gameState.bingoBoard[i] || '';
-        input.maxLength = 2; // Max 2 digits for numbers 1-25
-        input.readOnly = gameState.isBoardLocked; // Lock input if board is locked
+        input.maxLength = 2;
+        input.readOnly = gameState.isBoardLocked;
 
         if (gameState.isBoardLocked) {
             cell.classList.add('locked');
@@ -270,7 +342,6 @@ function updateCallerDisplay() {
     DOMElements.currentCalledNumber.textContent = gameState.calledNumbers.size > 0 ? Array.from(gameState.calledNumbers).pop() : '?';
     DOMElements.calledCount.textContent = gameState.calledNumbers.size;
 
-    // Update history
     DOMElements.calledNumbersHistory.innerHTML = '';
     Array.from(gameState.calledNumbers).sort((a, b) => a - b).forEach(num => {
         const chip = document.createElement('span');
@@ -278,12 +349,10 @@ function updateCallerDisplay() {
         chip.textContent = num;
         DOMElements.calledNumbersHistory.appendChild(chip);
     });
-    // Auto-scroll to bottom
     DOMElements.calledNumbersHistory.scrollTop = DOMElements.calledNumbersHistory.scrollHeight;
 
-    // Animate sphere
     DOMElements.calledNumberSphere.classList.remove('pop-bounce');
-    void DOMElements.calledNumberSphere.offsetWidth; // Trigger reflow
+    void DOMElements.calledNumberSphere.offsetWidth;
     DOMElements.calledNumberSphere.classList.add('pop-bounce');
 }
 
@@ -292,15 +361,14 @@ function updateSoundButtonUI() {
 }
 
 function updateLinesCompletedDisplay() {
-    const maxLines = WINNING_LINES.length; // Max 12 lines
+    const maxLines = WINNING_LINES.length;
     DOMElements.linesCompletedCountText.textContent = gameState.totalLinesCompleted;
     const progressPercentage = (gameState.totalLinesCompleted / maxLines) * 100;
     DOMElements.linesProgressBar.style.width = `${progressPercentage}%`;
 }
 
-function showVictoryModal() {
-    DOMElements.victoryModal.classList.add('visible');
-    // Trigger confetti
+function triggerConfetti() {
+    if (typeof confetti !== 'function') return;
     const duration = 15 * 1000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
@@ -311,55 +379,61 @@ function showVictoryModal() {
 
     const interval = setInterval(function() {
         const timeLeft = animationEnd - Date.now();
-
         if (timeLeft <= 0) {
             return clearInterval(interval);
         }
-
         const particleCount = 50 * (timeLeft / duration);
-        // since particles fall down, start a bit higher than random
         confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
         confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
     }, 250);
+}
+
+function showVictoryModal(isWinner = true, winnerName = '') {
+    if (isWinner) {
+        DOMElements.gameOverTitle.textContent = '🏆 BINGO! VICTORY! 🏆';
+        DOMElements.gameOverMessage.textContent = 'Chúc mừng bạn đã hoàn thành 5 đường BINGO!';
+        audioManager.playVictoryFanfare();
+        triggerConfetti();
+    } else {
+        DOMElements.gameOverTitle.textContent = 'GAME OVER';
+        DOMElements.gameOverMessage.textContent = `Rất tiếc! ${winnerName} đã chiến thắng.`;
+    }
+
+    // Cập nhật nút bấm dựa trên vai trò của người chơi
+    if (gameState.playerRole === 'host') {
+        DOMElements.resetGameBtn.querySelector('.button-text').textContent = '🔄 Chơi Ván Mới';
+    } else {
+        DOMElements.resetGameBtn.querySelector('.button-text').textContent = 'OK';
+    }
+
+    DOMElements.victoryModal.classList.add('visible');
 }
 
 function hideVictoryModal() {
     DOMElements.victoryModal.classList.remove('visible');
 }
 
-// --- 6. Game Logic ---
+function showMultiplayerModal() {
+    DOMElements.mainModal.classList.add('visible');
+    DOMElements.gameContainer.classList.add('hidden');
+}
 
-function initializeGame(forceReset = false) {
-    // Try to load game from storage unless a reset is forced
-    if (!forceReset) {
-        const loadedState = loadState();
-        if (loadedState) {
-            Object.assign(gameState, loadedState);
+function hideMultiplayerModal() {
+    DOMElements.mainModal.classList.remove('visible');
+    DOMElements.gameContainer.classList.remove('hidden');
+}
 
-            // Re-render UI based on loaded state
-            applyTheme(gameState.theme);
-            audioManager.setMute(gameState.isMuted);
-            updateSoundButtonUI();
-            renderBingoGrid();
-            updateCallerDisplay();
-            // checkWinConditions will update line count and redraw lines/styles
-            // Pass true to suppress sounds on initial load
-            checkWinConditions(true);
+function openProfileModal() {
+    DOMElements.profileAvatarPreview.src = (gameState.user && gameState.user.photoURL) || DEFAULT_AVATAR;
+    DOMElements.profileModal.classList.add('visible');
+}
 
-            // Set button states based on loaded state
-            DOMElements.randomFillBtn.disabled = gameState.isBoardLocked;
-            DOMElements.lockBoardBtn.disabled = gameState.isBoardLocked;
-            DOMElements.callNumberBtn.disabled = !gameState.isBoardLocked || gameState.isGameOver;
+function closeProfileModal() {
+    DOMElements.profileModal.classList.remove('visible');
+}
 
-            // The checkWinConditions call will handle showing the modal if game is over.
-            return; // Exit initialization, we've loaded a game
-        }
-    }
-
-    // This part runs for a new game or a forced reset
-    localStorage.removeItem(STORAGE_KEY);
-
-    // Reset state object
+function resetClientForNewRound() {
+    // Don't touch: user, playerId, roomCode, playerRole, knownPlayerIds, roomStatus
     gameState.bingoBoard.fill(null);
     gameState.selectedCells.fill(false);
     gameState.calledNumbers.clear();
@@ -367,38 +441,549 @@ function initializeGame(forceReset = false) {
     gameState.linesCompleted.clear();
     gameState.totalLinesCompleted = 0;
     gameState.isGameOver = false;
-    // User's theme & mute preference should persist across game resets.
-    // User's mute preference should persist across game resets, so we don't reset it here.
 
     // Reset UI
     renderBingoGrid();
     updateCallerDisplay();
     updateLinesCompletedDisplay();
     hideVictoryModal();
-    DOMElements.bingoLinesSVG.innerHTML = ''; // Clear SVG lines
+    DOMElements.bingoLinesSVG.innerHTML = '';
+    DOMElements.bingoGrid.classList.remove('bingo-victory');
+    DOMElements.randomFillBtn.disabled = false;
+    DOMElements.lockBoardBtn.disabled = false;
+    DOMElements.lockBoardBtn.querySelector('.button-text').textContent = '🔒 Khóa Bảng & Bắt Đầu';
+    DOMElements.currentCalledNumber.textContent = '?';
+    DOMElements.boardControls.classList.remove('hidden');
+    DOMElements.turnStatusDisplay.classList.add('hidden');
+    clearInterval(turnTimerInterval);
+
+    showMultiplayerModal();
+}
+// --- 6. Game Logic ---
+function displayAuthError(message) {
+    DOMElements.authError.textContent = "Lỗi: " + message;
+    DOMElements.authError.classList.remove('hidden');
+    DOMElements.authError.classList.add('animate-shake');
+}
+
+function displayAuthSuccess(message) {
+    DOMElements.authSuccess.textContent = message;
+    DOMElements.authSuccess.classList.remove('hidden');
+    DOMElements.authSuccess.classList.add('animate-fade-in');
+    setTimeout(() => DOMElements.authSuccess.classList.add('hidden'), 3000);
+}
+
+function initializeGame(forceReset = false) {
+    localStorage.removeItem(STORAGE_KEY);
+    gameState.playerId = gameState.user ? gameState.user.uid : null;
+
+    gameState.bingoBoard.fill(null);
+    gameState.selectedCells.fill(false);
+    gameState.calledNumbers.clear();
+    gameState.isBoardLocked = false;
+    gameState.linesCompleted.clear();
+    gameState.totalLinesCompleted = 0;
+    gameState.isGameOver = false;
+    gameState.roomCode = null;
+    gameState.playerRole = null;
+    gameState.knownPlayerIds.clear();
+
+    if (gameState.user) {
+        DOMElements.authView.classList.add('hidden');
+        DOMElements.lobbyView.classList.remove('hidden');
+    } else {
+        DOMElements.authView.classList.remove('hidden');
+        DOMElements.lobbyView.classList.add('hidden');
+    }
+    DOMElements.roomActions.classList.remove('hidden');
+    DOMElements.roomInfoDisplay.classList.add('hidden');
+    renderBingoGrid();
+    DOMElements.startGameBtn.classList.add('hidden');
+    DOMElements.startGameBtn.disabled = true;
+    updateCallerDisplay();
+    updateLinesCompletedDisplay();
+    hideVictoryModal();
+    DOMElements.bingoLinesSVG.innerHTML = '';
     DOMElements.bingoGrid.classList.remove('bingo-victory');
 
     applyTheme(gameState.theme);
-    // Update sound UI based on potentially persistent mute state
     updateSoundButtonUI();
 
-    // Enable board setup buttons, disable caller button
     DOMElements.randomFillBtn.disabled = false;
     DOMElements.lockBoardBtn.disabled = false;
-    DOMElements.callNumberBtn.disabled = true;
     DOMElements.currentCalledNumber.textContent = '?';
+    DOMElements.lockBoardBtn.querySelector('.button-text').textContent = '🔒 Khóa Bảng & Bắt Đầu';
+    DOMElements.roomCodeInput.value = '';
 }
 
 function fillBoardRandomly() {
     if (gameState.isBoardLocked) return;
 
-    const numbers = Array.from({ length: MAX_NUMBER }, (_, i) => i + MIN_NUMBER); // [1, 2, ..., 25]
+    const numbers = Array.from({ length: MAX_NUMBER }, (_, i) => i + MIN_NUMBER);
     shuffleArray(numbers);
     gameState.bingoBoard = numbers.slice(0, TOTAL_CELLS);
     renderBingoGrid();
 }
 
-function validateAndLockBoard() {
+async function createRoom() {
+    DOMElements.createRoomBtn.disabled = true;
+    const roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+    gameState.roomCode = roomCode;
+    gameState.playerRole = 'host';
+    const maxPlayers = parseInt(DOMElements.maxPlayersSelect.value, 10);
+
+    const roomData = {
+        status: 'waiting',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        hostId: gameState.playerId,
+        playerOrder: [],
+        maxPlayers: maxPlayers,
+        turn: null,
+        turnStartedAt: null,
+        players: {
+            [gameState.playerId]: {
+                role: 'host',
+                isReady: false,
+                displayName: gameState.user.displayName,
+                photoURL: gameState.user.photoURL || null,
+                disconnectedAt: null,
+            }
+        },
+        calledNumbers: {},
+    };
+
+    try {
+        await database.ref('rooms/' + roomCode).set(roomData);
+        console.log(`Room ${roomCode} created successfully.`);
+
+        const playerRef = database.ref(`rooms/${roomCode}/players/${gameState.playerId}`);
+        playerRef.onDisconnect().update({ disconnectedAt: firebase.database.ServerValue.TIMESTAMP });
+        localStorage.setItem('activeRoomCode', roomCode);
+
+        DOMElements.roomActions.classList.add('hidden');
+        DOMElements.roomInfoDisplay.classList.remove('hidden');
+        DOMElements.roomCodeDisplay.textContent = roomCode;
+
+        listenForGameEvents(roomCode);
+    } catch (error) {
+        console.error("Failed to create room:", error);
+        alert("Không thể tạo phòng. Vui lòng thử lại.");
+        DOMElements.createRoomBtn.disabled = false;
+    }
+}
+
+async function joinRoom() {
+    const roomCode = DOMElements.roomCodeInput.value.trim().toUpperCase();
+    if (roomCode.length !== 5) {
+        alert("Mã phòng phải có 5 ký tự.");
+        return;
+    }
+
+    DOMElements.joinRoomBtn.disabled = true;
+    const roomRef = database.ref('rooms/' + roomCode);
+    const snapshot = await roomRef.once('value');
+
+    if (!snapshot.exists()) {
+        alert("Phòng không tồn tại!");
+        DOMElements.joinRoomBtn.disabled = false;
+        return;
+    }
+
+    const roomData = snapshot.val();
+    const maxPlayers = roomData.maxPlayers || 2;
+    if (Object.keys(roomData.players || {}).length >= maxPlayers) {
+        alert("Phòng đã đầy!");
+        DOMElements.joinRoomBtn.disabled = false;
+        return;
+    }
+
+    try {
+        gameState.roomCode = roomCode;
+        gameState.playerRole = 'guest';
+        await roomRef.child('players').child(gameState.playerId).set({
+            role: 'guest',
+            isReady: false,
+            displayName: gameState.user.displayName,
+            photoURL: gameState.user.photoURL || null,
+            disconnectedAt: null,
+        });
+        console.log(`Joined room ${roomCode} as a guest.`);
+        alert("Bạn đã vào phòng! Hãy khóa bảng của bạn để bắt đầu.");
+
+        DOMElements.roomActions.classList.add('hidden');
+        DOMElements.roomInfoDisplay.classList.remove('hidden');
+        DOMElements.roomCodeDisplay.textContent = roomCode;
+
+        const playerRef = database.ref(`rooms/${roomCode}/players/${gameState.playerId}`);
+        playerRef.onDisconnect().update({ disconnectedAt: firebase.database.ServerValue.TIMESTAMP });
+        localStorage.setItem('activeRoomCode', roomCode);
+
+        listenForGameEvents(roomCode);
+    } catch (error) {
+        console.error("Failed to join room:", error);
+        alert("Không thể vào phòng. Vui lòng thử lại.");
+        DOMElements.joinRoomBtn.disabled = false;
+    }
+}
+
+async function handleLeaveRoom() {
+    if (!gameState.roomCode || !gameState.playerId) return;
+
+    const roomCode = gameState.roomCode;
+    const playerId = gameState.playerId;
+    const roomRef = database.ref(`rooms/${roomCode}`);
+    const playerRef = roomRef.child('players').child(playerId);
+
+    try {
+        await playerRef.onDisconnect().cancel();
+        await playerRef.remove();
+
+        const roomSnapshot = await roomRef.once('value');
+        const roomData = roomSnapshot.val();
+        if (roomData && (!roomData.players || Object.keys(roomData.players).length === 0)) {
+            console.log(`Room ${roomCode} is empty, deleting it.`);
+            await roomRef.remove();
+        }
+    } catch (error) {
+        console.error("Error during Firebase cleanup on leave:", error);
+    } finally {
+        cleanUpAfterLeave(roomCode);
+    }
+}
+
+function cleanUpAfterLeave(roomCode) {
+    if (roomCode) {
+        database.ref('rooms/' + roomCode).off();
+    }
+    localStorage.removeItem('activeRoomCode');
+    initializeGame(true);
+    showMultiplayerModal();
+}
+
+async function rejoinRoom(roomCode) {
+    const roomRef = database.ref('rooms/' + roomCode);
+    const snapshot = await roomRef.once('value');
+
+    if (snapshot.exists()) {
+        const roomData = snapshot.val();
+        const playerInRoom = roomData.players && roomData.players[gameState.playerId];
+
+        if (playerInRoom) {
+            console.log("Successfully reconnected to room", roomCode);
+            gameState.roomCode = roomCode;
+            gameState.playerRole = playerInRoom.role;
+
+            const playerRef = database.ref(`rooms/${roomCode}/players/${gameState.playerId}`);
+            playerRef.onDisconnect().update({ disconnectedAt: firebase.database.ServerValue.TIMESTAMP });
+            await playerRef.update({ disconnectedAt: null });
+
+            listenForGameEvents(roomCode);
+            hideMultiplayerModal();
+        } else {
+            cleanUpAfterLeave(roomCode);
+        }
+    } else {
+        cleanUpAfterLeave(roomCode);
+    }
+}
+
+function renderPlayerList(players) {
+    DOMElements.playerList.innerHTML = '';
+    if (!players) return;
+
+    Object.values(players).forEach(player => {
+        const playerEl = document.createElement('div');
+        playerEl.className = 'player-item';
+        if (player.role === 'host') {
+            playerEl.classList.add('is-host');
+        }
+        if (player.disconnectedAt) {
+            playerEl.classList.add('is-offline');
+        }
+
+        const avatar = player.photoURL || DEFAULT_AVATAR;
+        const displayName = player.displayName || 'Player';
+
+        playerEl.innerHTML = `
+            <img src="${avatar}" alt="Avatar" class="header-avatar">
+            <span class="player-name">${displayName}</span>
+            ${player.role === 'host' ? '<span class="host-icon" title="Chủ phòng">👑</span>' : ''}
+            <span class="player-status ${player.isReady ? 'is-ready' : ''}" title="${player.isReady ? 'Sẵn sàng' : 'Chưa sẵn sàng'}"></span>
+        `;
+
+        DOMElements.playerList.appendChild(playerEl);
+    });
+}
+
+function renderLobbyPlayerList(players) {
+    DOMElements.lobbyPlayerList.innerHTML = '';
+    if (!players) return;
+
+    Object.values(players).forEach(player => {
+        const playerEl = document.createElement('div');
+        playerEl.className = 'player-item';
+        if (player.role === 'host') {
+            playerEl.classList.add('is-host');
+        }
+
+        const avatar = player.photoURL || DEFAULT_AVATAR;
+        const displayName = player.displayName || 'Player';
+
+        playerEl.innerHTML = `
+            <img src="${avatar}" alt="Avatar" class="header-avatar">
+            <span class="player-name">${displayName}</span>
+            ${player.role === 'host' ? '<span class="host-icon" title="Chủ phòng">👑</span>' : ''}
+            <span class="player-status ${player.isReady ? 'is-ready' : ''}" title="${player.isReady ? 'Sẵn sàng' : 'Chưa sẵn sàng'}"></span>
+        `;
+        DOMElements.lobbyPlayerList.appendChild(playerEl);
+    });
+}
+
+async function skipTurn() {
+    if (!gameState.roomCode || gameState.playerRole !== 'host') return;
+
+    const roomRef = database.ref('rooms/' + gameState.roomCode);
+    roomRef.transaction(roomData => {
+        if (roomData && roomData.status === 'playing') {
+            const now = Date.now();
+            if (now - roomData.turnStartedAt < TURN_DURATION * 1000) {
+                console.log("Host tried to skip turn, but it was updated recently. Aborting skip.");
+                return;
+            }
+
+            const playerOrder = roomData.playerOrder;
+            const currentPlayerIndex = playerOrder.indexOf(roomData.turn);
+            const nextPlayerIndex = (currentPlayerIndex + 1) % playerOrder.length;
+            const nextPlayerId = playerOrder[nextPlayerIndex];
+
+            roomData.turn = nextPlayerId;
+            roomData.turnStartedAt = firebase.database.ServerValue.TIMESTAMP;
+            return roomData;
+        }
+        return;
+    }, (error, committed) => {
+        if (error) {
+            console.error('Skip turn transaction failed:', error);
+        } else if (!committed) {
+            console.log('Skip turn transaction aborted (e.g., player made a move).');
+        } else {
+            console.log('Skip turn transaction succeeded.');
+        }
+    });
+}
+
+function updateTurnUI(roomData) {
+    const players = roomData.players || {};
+
+    // --- Xử lý các trạng thái không phải là 'playing' ---
+    if (roomData.status !== 'playing') {
+        DOMElements.turnStatusDisplay.classList.add('hidden');
+        DOMElements.bingoGrid.classList.remove('is-my-turn');
+        // Hiển thị tất cả các nút điều khiển bảng khi không ở trong trận
+        DOMElements.boardControls.classList.remove('hidden');
+        DOMElements.randomFillBtn.disabled = gameState.isBoardLocked;
+        DOMElements.lockBoardBtn.disabled = gameState.isBoardLocked;
+        DOMElements.newGameBtn.classList.remove('hidden');
+        return;
+    }
+
+    // --- Xử lý trạng thái 'playing' ---
+    DOMElements.turnStatusDisplay.classList.remove('hidden');
+    DOMElements.newGameBtn.classList.add('hidden'); // Nút "Trò Chơi Mới" bị ẩn trong trận
+    clearInterval(turnTimerInterval);
+
+    // Nếu người chơi cục bộ chưa khóa bảng
+    if (!gameState.isBoardLocked) {
+        DOMElements.boardControls.classList.remove('hidden');
+        DOMElements.randomFillBtn.disabled = false;
+        DOMElements.lockBoardBtn.disabled = false;
+        DOMElements.turnStatusText.textContent = 'Hãy điền và khóa bảng của bạn để sẵn sàng!';
+        DOMElements.turnTimerContainer.classList.add('hidden');
+        DOMElements.bingoGrid.classList.remove('is-my-turn');
+        return;
+    }
+
+    // Nếu người chơi cục bộ đã khóa bảng, ẩn các nút điều khiển và hiển thị trạng thái
+    DOMElements.boardControls.classList.add('hidden');
+
+    const allPlayersReady = Object.values(players).every(p => p.isReady === true);
+
+    // Nếu đang chờ những người chơi khác sẵn sàng
+    if (!allPlayersReady) {
+        DOMElements.turnStatusText.textContent = 'Đang chờ các người chơi khác khóa bảng...';
+        DOMElements.turnTimerContainer.classList.add('hidden');
+        DOMElements.bingoGrid.classList.remove('is-my-turn');
+        return;
+    }
+
+    // --- Tất cả người chơi đã sẵn sàng, logic lượt chơi bắt đầu ---
+
+    // Nếu lượt chơi chưa được thiết lập, chủ phòng sẽ thiết lập
+    if (!roomData.turn) {
+        if (gameState.playerRole === 'host') {
+            const roomRef = database.ref('rooms/' + gameState.roomCode);
+            roomRef.update({
+                turn: roomData.playerOrder[0],
+                turnStartedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+        // Khách chỉ cần đợi lượt được thiết lập
+        DOMElements.turnStatusText.textContent = 'Tất cả đã sẵn sàng! Chuẩn bị bắt đầu...';
+        DOMElements.bingoGrid.classList.remove('is-my-turn');
+        return;
+    }
+
+    // Lượt chơi đã được thiết lập, tiến hành với thanh thời gian và UI
+    if (roomData.turnStartedAt) {
+        DOMElements.turnTimerContainer.classList.remove('hidden');
+        const turnStartTime = roomData.turnStartedAt;
+
+        turnTimerInterval = setInterval(() => {
+            const now = Date.now();
+            const elapsed = (now - turnStartTime) / 1000;
+            const remaining = Math.max(0, TURN_DURATION - elapsed);
+            const percentage = (remaining / TURN_DURATION) * 100;
+            DOMElements.turnTimerBar.style.width = `${percentage}%`;
+
+            if (remaining <= 0 && gameState.playerRole === 'host') {
+                clearInterval(turnTimerInterval);
+                skipTurn();
+            }
+        }, 500);
+    } else {
+        DOMElements.turnTimerContainer.classList.add('hidden');
+    }
+
+    const currentTurnPlayerId = roomData.turn;
+    gameState.currentTurnPlayerId = currentTurnPlayerId;
+
+    if (currentTurnPlayerId === gameState.playerId) {
+        DOMElements.turnStatusText.textContent = '✨ Đến lượt bạn chọn một số! ✨';
+        DOMElements.bingoGrid.classList.add('is-my-turn');
+    } else {
+        const currentPlayer = roomData.players[currentTurnPlayerId];
+        const currentTurnPlayerName = currentPlayer ? currentPlayer.displayName : 'Đối thủ';
+        DOMElements.turnStatusText.textContent = `⏳ Đang chờ ${currentTurnPlayerName} chọn...`;
+        DOMElements.bingoGrid.classList.remove('is-my-turn');
+    }
+}
+
+function listenForGameEvents(roomCode) {
+    const roomRef = database.ref('rooms/' + roomCode);
+    roomRef.on('value', (snapshot) => {
+        const roomData = snapshot.val();
+        if (!roomData) {
+            if (gameState.roomCode) {
+                alert("Phòng chơi đã bị đóng. Quay về màn hình chính.");
+                cleanUpAfterLeave(gameState.roomCode);
+                roomRef.off();
+            }
+            return;
+        }
+
+        const players = roomData.players || {};
+        const playerCount = Object.keys(players).length;
+        const maxPlayers = roomData.maxPlayers || 2;
+
+        const previousStatus = gameState.roomStatus;
+        gameState.roomStatus = roomData.status;
+
+        if (previousStatus === 'finished' && roomData.status === 'waiting') {
+            console.log("New round started by host. Resetting client state.");
+            resetClientForNewRound();
+        }
+
+        // New player join notification
+        const currentPlayerIds = new Set(Object.keys(players));
+        let newPlayerId = null;
+        for (const id of currentPlayerIds) {
+            if (!gameState.knownPlayerIds.has(id)) {
+                newPlayerId = id;
+                break;
+            }
+        }
+        if (newPlayerId && newPlayerId !== gameState.playerId && gameState.knownPlayerIds.size > 0) {
+            const newPlayer = players[newPlayerId];
+            if (newPlayer) {
+                alert(`${newPlayer.displayName} đã vào phòng!`);
+            }
+        }
+        gameState.knownPlayerIds = currentPlayerIds;
+
+        // Host clean stale player
+        if (gameState.playerRole === 'host') {
+            const now = Date.now();
+            const STALE_THRESHOLD = 30 * 1000;
+            Object.entries(players).forEach(([playerId, playerData]) => {
+                if (playerData.disconnectedAt && (now - playerData.disconnectedAt > STALE_THRESHOLD)) {
+                    console.log(`Host cleaning up stale player: ${playerData.displayName}`);
+                    database.ref(`rooms/${roomCode}/players/${playerId}`).remove();
+                }
+            });
+        }
+
+        // Process called numbers
+        const calledNumbersData = roomData.calledNumbers || {};
+        const calledNumbers = Object.keys(calledNumbersData).map(Number);
+        const newNumbers = calledNumbers.filter(num => !gameState.calledNumbers.has(num));
+
+        if (newNumbers.length > 0) {
+            newNumbers.forEach(num => {
+                gameState.calledNumbers.add(num);
+                checkBoardForCalledNumber(num);
+            });
+            updateCallerDisplay();
+            audioManager.playPopSound();
+        }
+
+        // Update in-game UI
+        if (gameState.roomCode) {
+            DOMElements.gameRoomInfo.classList.remove('hidden');
+            DOMElements.gameRoomCode.textContent = gameState.roomCode;
+            DOMElements.playerListContainer.classList.remove('hidden');
+            renderPlayerList(players);
+        }
+
+        // Update Lobby UI
+        if (DOMElements.mainModal.classList.contains('visible') && roomData.status === 'waiting') {
+            renderLobbyPlayerList(players);
+            DOMElements.waitingForPlayerText.textContent = `Đang chờ người chơi... (${playerCount}/${maxPlayers})`;
+
+            if (gameState.playerRole === 'host') {
+                DOMElements.startGameBtn.classList.remove('hidden');
+                const canStart = playerCount >= 2;
+                DOMElements.startGameBtn.disabled = !canStart;
+                DOMElements.startGameBtn.title = canStart ? 'Bắt đầu trận đấu' : 'Cần ít nhất 2 người chơi trong phòng.';
+            }
+        }
+
+        if (!DOMElements.roomInfoDisplay.classList.contains('hidden')) {
+            DOMElements.waitingForPlayerText.textContent = `Đang chờ người chơi... (${playerCount}/${maxPlayers})`;
+        }
+
+        updateTurnUI(roomData);
+
+        // Handle Game Over
+        if (roomData.status === 'finished' && roomData.winner && !gameState.isGameOver) {
+            gameState.isGameOver = true;
+            DOMElements.bingoGrid.classList.add('locked');
+            DOMElements.turnStatusDisplay.classList.add('hidden');
+            clearInterval(turnTimerInterval);
+
+            if (roomData.winner.playerId === gameState.playerId) {
+                showVictoryModal(true);
+            } else {
+                showVictoryModal(false, roomData.winner.displayName);
+            }
+        }
+
+        if (roomData.status === 'playing' && DOMElements.mainModal.classList.contains('visible')) {
+            hideMultiplayerModal();
+        }
+    });
+}
+
+async function validateAndLockBoard() {
     if (gameState.isBoardLocked) return;
 
     const currentNumbers = new Set();
@@ -424,67 +1009,139 @@ function validateAndLockBoard() {
     });
 
     if (currentNumbers.size !== TOTAL_CELLS) {
-        isValid = false; // Ensure all 25 cells are filled
+        isValid = false;
     }
 
     if (isValid) {
         gameState.isBoardLocked = true;
-        renderBingoGrid(); // Re-render to apply 'locked' class to inputs
+        renderBingoGrid();
         DOMElements.randomFillBtn.disabled = true;
         DOMElements.lockBoardBtn.disabled = true;
-        DOMElements.callNumberBtn.disabled = false;
-        saveState(); // Save state after locking the board
-        alert('Bảng BINGO đã được khóa! Bắt đầu quay số.');
+        DOMElements.lockBoardBtn.querySelector('.button-text').textContent = 'Đang chờ đối thủ...';
+
+        try {
+            const playerRef = database.ref(`rooms/${gameState.roomCode}/players/${gameState.playerId}`);
+            await playerRef.update({
+                isReady: true,
+                board: gameState.bingoBoard
+            });
+            console.log('Player is ready. Board sent to Firebase.');
+        } catch (error) {
+            console.error("Failed to set ready status:", error);
+            alert("Có lỗi xảy ra khi khóa bảng. Vui lòng thử lại.");
+            gameState.isBoardLocked = false;
+            renderBingoGrid();
+            DOMElements.randomFillBtn.disabled = false;
+            DOMElements.lockBoardBtn.disabled = false;
+            DOMElements.lockBoardBtn.querySelector('.button-text').textContent = '🔒 Khóa Bảng & Bắt Đầu';
+        }
     } else {
         alert('Vui lòng điền đủ 25 số duy nhất từ 1-25 vào bảng.');
     }
 }
 
-function callNextNumber() {
-    if (!gameState.isBoardLocked || gameState.isGameOver) return;
-
-    // Tạo một tập hợp tất cả các số không khả dụng để quay.
-    // Bao gồm các số đã được quay trước đó VÀ các số người chơi đã tự chọn trên bảng.
-    const unavailableNumbers = new Set(gameState.calledNumbers);
-    gameState.selectedCells.forEach((isSelected, index) => {
-        if (isSelected) {
-            unavailableNumbers.add(gameState.bingoBoard[index]);
-        }
-    });
-
-    const availableNumbers = Array.from({ length: MAX_NUMBER }, (_, i) => i + MIN_NUMBER)
-        .filter(num => !unavailableNumbers.has(num));
-
-    if (availableNumbers.length === 0) {
-        alert('Đã gọi hết tất cả các số! Trò chơi kết thúc.');
-        DOMElements.callNumberBtn.disabled = true;
-        return;
-    }
-
-    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-    const calledNum = availableNumbers[randomIndex];
-    gameState.calledNumbers.add(calledNum);
-
-    audioManager.playPopSound(); // Play sound for calling number
-    updateCallerDisplay();
-    checkBoardForCalledNumber(calledNum);
-    saveState(); // Save state after a new number is called
-}
-
 function checkBoardForCalledNumber(calledNum) {
     gameState.bingoBoard.forEach((boardNum, index) => {
         if (boardNum === calledNum) {
-            toggleCellSelection(index, true); // Mark as selected if it matches a called number
+            toggleCellSelection(index, true);
         }
     });
+}
+
+async function handleCellPick(index) {
+    if (!gameState.isBoardLocked || gameState.isGameOver || gameState.playerId !== gameState.currentTurnPlayerId) {
+        return;
+    }
+
+    const numberToCall = gameState.bingoBoard[index];
+    const roomRef = database.ref('rooms/' + gameState.roomCode);
+    const roomSnapshot = await roomRef.once('value');
+    const roomData = roomSnapshot.val();
+
+    if (roomData.calledNumbers && roomData.calledNumbers[numberToCall]) {
+        console.log(`Number ${numberToCall} has already been called.`);
+        return;
+    }
+
+    const playerOrder = roomData.playerOrder;
+    const currentPlayerIndex = playerOrder.indexOf(gameState.playerId);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % playerOrder.length;
+    const nextPlayerId = playerOrder[nextPlayerIndex];
+
+    const updates = {};
+    updates[`/calledNumbers/${numberToCall}`] = true;
+    updates['/turnStartedAt'] = firebase.database.ServerValue.TIMESTAMP;
+    updates['/turn'] = nextPlayerId;
+
+    await roomRef.update(updates);
+    console.log(`Player ${gameState.user.displayName} called number ${numberToCall}. Next turn: ${nextPlayerId}`);
+}
+
+async function handleNewRoundByHost() {
+    if (gameState.playerRole !== 'host' || !gameState.roomCode) return;
+
+    const roomRef = database.ref('rooms/' + gameState.roomCode);
+    const snapshot = await roomRef.once('value');
+    const roomData = snapshot.val();
+    if (!roomData || roomData.status !== 'finished') return;
+
+    // Reset isReady for all players for the new round
+    const playerUpdates = {};
+    Object.keys(roomData.players || {}).forEach(pid => {
+        playerUpdates[`/players/${pid}/isReady`] = false;
+    });
+    await roomRef.update(playerUpdates);
+
+    await roomRef.update({
+        status: 'waiting',
+        winner: null,
+        calledNumbers: {},
+        turn: null,
+        turnStartedAt: null,
+    });
+}
+async function handleStartGameClick() {
+    if (gameState.playerRole !== 'host' || !gameState.roomCode) return;
+
+    const roomRef = database.ref('rooms/' + gameState.roomCode);
+    const snapshot = await roomRef.once('value');
+    const roomData = snapshot.val();
+
+    if (!roomData || roomData.status !== 'waiting') return;
+
+    const players = roomData.players || {};
+    const playerIds = Object.keys(players);
+
+    if (playerIds.length < 2) {
+        alert("Không thể bắt đầu! Cần ít nhất 2 người chơi trong phòng.");
+        return;
+    }
+
+    // Reset trạng thái isReady cho tất cả người chơi cho vòng mới
+    const playerUpdates = {};
+    playerIds.forEach(pid => {
+        playerUpdates[`/players/${pid}/isReady`] = false;
+    });
+    await roomRef.update(playerUpdates);
+
+    // Xáo trộn thứ tự người chơi cho công bằng
+    const playerOrder = shuffleArray(playerIds);
+
+    const updates = {
+        status: 'playing', // Trò chơi bắt đầu, người chơi thấy bảng
+        playerOrder: playerOrder,
+        turn: null,
+        turnStartedAt: null,
+        calledNumbers: {}, // Reset các số đã gọi cho ván mới
+    };
+
+    await roomRef.update(updates);
 }
 
 function toggleCellSelection(index, fromCaller = false) {
     if (!gameState.isBoardLocked || gameState.isGameOver) return;
 
     const cellElement = DOMElements.bingoGrid.children[index];
-    const cellNumber = gameState.bingoBoard[index];
-
     gameState.selectedCells[index] = !gameState.selectedCells[index];
 
     if (gameState.selectedCells[index]) {
@@ -495,24 +1152,21 @@ function toggleCellSelection(index, fromCaller = false) {
     }
 
     checkWinConditions();
-    saveState(); // Save state after a cell is toggled
 }
 
 function checkWinConditions(isInitialLoad = false) {
     if (gameState.isGameOver) return;
 
-    // Clear previous SVG lines and cell stylings to handle state changes (like un-selecting a cell)
-    // Use `userSpaceOnUse` for the gradient to ensure it's applied consistently
-    // across the entire SVG canvas, fixing issues with horizontal/vertical lines.
     DOMElements.bingoLinesSVG.innerHTML = `
         <defs>
             <linearGradient id="laserGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="500" y2="500">
-                <stop offset="0%" stop-color="var(--theme-primary)"/>
-                <stop offset="50%" stop-color="var(--theme-secondary)"/>
-                <stop offset="100%" stop-color="var(--theme-primary)"/>
+                <stop offset="0%" stop-color="var(--theme-primary)" />
+                <stop offset="50%" stop-color="var(--theme-secondary)" />
+                <stop offset="100%" stop-color="var(--theme-primary)" />
             </linearGradient>
         </defs>
     `;
+
     for (const cell of DOMElements.bingoGrid.children) {
         cell.classList.remove('completed-line');
     }
@@ -524,13 +1178,9 @@ function checkWinConditions(isInitialLoad = false) {
         const isLineComplete = line.every(cellIndex => gameState.selectedCells[cellIndex]);
 
         if (isLineComplete) {
-            // Add to the set of currently completed lines
             gameState.linesCompleted.add(lineIndex);
-
-            // Draw the laser line for this completed line
             drawLaserLine(line);
 
-            // Apply the 'completed-line' (red) style to the cells
             line.forEach(cellIndex => {
                 const cellElement = DOMElements.bingoGrid.children[cellIndex];
                 if (cellElement) {
@@ -538,7 +1188,6 @@ function checkWinConditions(isInitialLoad = false) {
                 }
             });
 
-            // If it's a newly completed line (and not loading), play the sound
             if (!previouslyCompleted.has(lineIndex) && !isInitialLoad) {
                 audioManager.playLaserSound();
             }
@@ -548,28 +1197,24 @@ function checkWinConditions(isInitialLoad = false) {
     gameState.totalLinesCompleted = gameState.linesCompleted.size;
     updateLinesCompletedDisplay();
 
-    if (gameState.totalLinesCompleted >= BINGO_SIZE) { // 5 lines for BINGO!
+    if (gameState.totalLinesCompleted >= BINGO_SIZE && !gameState.isGameOver) {
         gameState.isGameOver = true;
-        DOMElements.callNumberBtn.disabled = true;
-        // Disable further cell clicks
-        DOMElements.bingoGrid.classList.add('locked');
-        DOMElements.bingoGrid.classList.add('bingo-victory');
-
-        if (!isInitialLoad) {
-            audioManager.playVictoryFanfare();
-        }
-        showVictoryModal();
+        const roomRef = database.ref('rooms/' + gameState.roomCode);
+        roomRef.update({
+            status: 'finished',
+            winner: {
+                playerId: gameState.playerId,
+                displayName: gameState.user.displayName
+            }
+        });
     }
 }
 
 function drawLaserLine(lineIndices) {
     const svg = DOMElements.bingoLinesSVG;
-    // The SVG has a fixed viewBox of "0 0 500 500".
-    // All calculations must be done within this coordinate system,
-    // regardless of the actual display size of the grid.
     const VIRTUAL_GRID_SIZE = 500;
     const cellSize = VIRTUAL_GRID_SIZE / BINGO_SIZE;
-    // Calculate start and end points of the line
+
     const startCellIndex = lineIndices[0];
     const endCellIndex = lineIndices[BINGO_SIZE - 1];
 
@@ -578,11 +1223,8 @@ function drawLaserLine(lineIndices) {
     const endRow = Math.floor(endCellIndex / BINGO_SIZE);
     const endCol = endCellIndex % BINGO_SIZE;
 
-    // Center of the start cell
     const x1 = startCol * cellSize + cellSize / 2;
     const y1 = startRow * cellSize + cellSize / 2;
-
-    // Center of the end cell
     const x2 = endCol * cellSize + cellSize / 2;
     const y2 = endRow * cellSize + cellSize / 2;
 
@@ -596,22 +1238,19 @@ function drawLaserLine(lineIndices) {
     svg.appendChild(line);
 }
 
-// --- 7. Event Listeners ---
 function addGridEventListeners() {
     const inputs = DOMElements.bingoGrid.querySelectorAll('.bingo-cell input');
     inputs.forEach((input, index) => {
-        // Input handling for manual board setup
-        input.oninput = (event) => { // Sử dụng oninput để phản hồi ngay lập tức
+        input.oninput = (event) => {
             if (gameState.isBoardLocked) return;
 
             let value = event.target.value;
-            const currentInputIndex = index; // Lưu chỉ số của ô hiện tại
+            const currentInputIndex = index;
 
-            // Xử lý trường hợp input rỗng (người dùng xóa số)
             if (value === '') {
                 gameState.bingoBoard[currentInputIndex] = null;
                 event.target.classList.remove('invalid');
-                return; // Không cần kiểm tra thêm cho input rỗng
+                return;
             }
             if (value.length > 2) {
                 value = value.slice(0, 2);
@@ -620,11 +1259,9 @@ function addGridEventListeners() {
             const num = parseInt(value);
 
             let isCurrentInputValid = true;
-            // 1. Kiểm tra dải số (1-25)
             if (isNaN(num) || num < MIN_NUMBER || num > MAX_NUMBER) {
                 isCurrentInputValid = false;
             } else {
-                // 2. Kiểm tra tính duy nhất (không trùng với các ô khác) bằng Set để đảm bảo so sánh nghiêm ngặt
                 const existingNumbers = new Set(
                     gameState.bingoBoard.filter((val, idx) => idx !== currentInputIndex && val !== null)
                 );
@@ -635,8 +1272,7 @@ function addGridEventListeners() {
             if (isCurrentInputValid) {
                 gameState.bingoBoard[currentInputIndex] = num;
                 event.target.classList.remove('invalid');
-                // Auto-focus next cell
-                if (value.length === 2 || (value.length === 1 && num > 9)) { // If 2 digits or 1 digit > 9
+                if (value.length === 2 || (value.length === 1 && num > 9)) {
                     const nextInput = inputs[currentInputIndex + 1];
                     if (nextInput) {
                         nextInput.focus();
@@ -645,54 +1281,40 @@ function addGridEventListeners() {
             } else {
                 gameState.bingoBoard[currentInputIndex] = null;
                 event.target.classList.add('invalid');
-                // Stricter limit: if the input is invalid and not empty, clear it
-                // This prevents numbers like "0" or "26" from staying in the input field
                 if (value !== '') {
                     event.target.value = '';
                 }
             }
         };
 
-        // Cell click for selection (after board is locked)
-        input.parentElement.onclick = () => {
-            if (gameState.isBoardLocked && !gameState.isGameOver) {
-                toggleCellSelection(index);
-            }
-        };
+        input.parentElement.onclick = () => handleCellPick(index);
     });
 }
 
-// The event listeners below were calling `applyRippleEffect` redundantly.
-// The generic listener at the end of this section is the single, correct place
-// to handle the ripple effect for all buttons.
-
-DOMElements.randomFillBtn.addEventListener('click', (event) => {
-    fillBoardRandomly();
+// --- 7. Event Listeners ---
+DOMElements.randomFillBtn.addEventListener('click', fillBoardRandomly);
+DOMElements.createRoomBtn.addEventListener('click', createRoom);
+DOMElements.joinRoomBtn.addEventListener('click', joinRoom);
+DOMElements.leaveRoomBtn.addEventListener('click', handleLeaveRoom);
+DOMElements.startGameBtn.addEventListener('click', handleStartGameClick);
+DOMElements.closeProfileModalBtn.addEventListener('click', closeProfileModal);
+DOMElements.lockBoardBtn.addEventListener('click', validateAndLockBoard);
+DOMElements.resetGameBtn.addEventListener('click', () => {
+    if (gameState.playerRole === 'host') {
+        handleNewRoundByHost();
+    }
+    hideVictoryModal();
 });
-
-DOMElements.lockBoardBtn.addEventListener('click', (event) => {
-    validateAndLockBoard();
-});
-
-DOMElements.callNumberBtn.addEventListener('click', (event) => {
-    callNextNumber();
-});
-
-DOMElements.resetGameBtn.addEventListener('click', (event) => {
-    initializeGame(true); // Pass true to force a reset
-});
-
-DOMElements.newGameBtn.addEventListener('click', (event) => {
-    if (confirm('Bạn có chắc chắn muốn bắt đầu một trò chơi mới? Toàn bộ tiến trình hiện tại sẽ bị xóa.')) {
-        initializeGame(true); // Pass true to force a reset and clear storage
+DOMElements.newGameBtn.addEventListener('click', () => {
+    if (confirm('Bạn có chắc chắn muốn quay về sảnh chính? Toàn bộ tiến trình hiện tại sẽ bị xóa.')) {
+        initializeGame(true);
     }
 });
 
-DOMElements.toggleSoundBtn.addEventListener('click', (event) => {
+DOMElements.toggleSoundBtn.addEventListener('click', () => {
     gameState.isMuted = !gameState.isMuted;
     audioManager.setMute(gameState.isMuted);
     updateSoundButtonUI();
-    saveState();
 });
 
 DOMElements.themeSelector.addEventListener('click', (event) => {
@@ -702,18 +1324,241 @@ DOMElements.themeSelector.addEventListener('click', (event) => {
     const themeName = themeBtn.dataset.theme;
     if (themeName) {
         applyTheme(themeName);
-        saveState();
     }
 });
 
-// Add ripple effect to all cyber buttons
 document.querySelectorAll('.cyber-button').forEach(button => {
     button.addEventListener('click', applyRippleEffect);
 });
-// --- 8. Initial Setup ---
 
-// This function attempts to resume the AudioContext, which is required by modern browsers
-// to play any sound. It must be called as a result of a user gesture (e.g., a click).
+DOMElements.roomCodeDisplay.addEventListener('click', () => {
+    if (gameState.roomCode) {
+        navigator.clipboard.writeText(gameState.roomCode).then(() => {
+            alert(`Đã sao chép mã phòng: ${gameState.roomCode}`);
+        });
+    }
+});
+
+// --- 8. Initial Setup & Auth Handlers ---
+async function handleAuthSubmit(event) {
+    event.preventDefault();
+    const email = DOMElements.authEmailInput.value.trim();
+    const password = DOMElements.authPasswordInput.value;
+    const username = DOMElements.authUsernameInput.value.trim();
+
+    try {
+        if (isRegisterMode) {
+            if (!username) {
+                displayAuthError("Vui lòng nhập tên hiển thị.");
+                return;
+            }
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            await userCredential.user.updateProfile({ displayName: username });
+            displayAuthSuccess("Đăng ký thành công!");
+        } else {
+            await auth.signInWithEmailAndPassword(email, password);
+            displayAuthSuccess("Đăng nhập thành công!");
+        }
+    } catch (error) {
+        displayAuthError(getFriendlyAuthError(error));
+    }
+}
+
+DOMElements.authForm.addEventListener('submit', handleAuthSubmit);
+document.getElementById('auth-toggle-link').addEventListener('click', toggleAuthMode);
+DOMElements.avatarUploadInput.addEventListener('change', handleAvatarUpload);
+addGridEventListeners();
+
+DOMElements.authEmailInput.addEventListener('input', validateAuthInput);
+DOMElements.authPasswordInput.addEventListener('input', validateAuthInput);
+DOMElements.authUsernameInput.addEventListener('input', validateAuthInput);
+
+DOMElements.userInfo.addEventListener('click', () => {
+    DOMElements.userDropdown.classList.toggle('hidden');
+});
+DOMElements.viewProfileLink.addEventListener('click', () => {
+    openProfileModal();
+    DOMElements.userDropdown.classList.add('hidden');
+});
+DOMElements.logoutBtn.addEventListener('click', () => auth.signOut());
+
+window.addEventListener('click', (event) => {
+    if (gameState.user && !DOMElements.userProfileContainer.contains(event.target)) {
+        DOMElements.userDropdown.classList.add('hidden');
+    }
+});
+
+// --- 9. Session Management (Auto-logout) ---
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
+let inactivityTimer;
+
+function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    if (gameState.user) {
+        inactivityTimer = setTimeout(() => {
+            alert("Bạn đã không hoạt động trong 15 phút. Đang tự động đăng xuất để bảo mật.");
+            auth.signOut();
+        }, INACTIVITY_TIMEOUT);
+    }
+}
+
+function setupActivityListeners() {
+    ['mousemove', 'keydown', 'click', 'scroll'].forEach(event => {
+        window.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+}
+
+function toggleAuthMode() {
+    isRegisterMode = !isRegisterMode;
+    DOMElements.authError.classList.add('hidden');
+    DOMElements.authForm.reset();
+
+    if (isRegisterMode) {
+        DOMElements.authTitle.textContent = 'Đăng Ký';
+        DOMElements.authUsernameInput.classList.remove('hidden');
+        DOMElements.authUsernameInput.required = true;
+        DOMElements.authSubmitBtn.textContent = 'Đăng Ký';
+        DOMElements.authToggleText.innerHTML = 'Đã có tài khoản? <span id="auth-toggle-link" class="link-style">Đăng nhập</span>';
+        DOMElements.authSubmitBtnText.textContent = 'Đăng Ký';
+    } else {
+        DOMElements.authTitle.textContent = 'Đăng Nhập';
+        DOMElements.authUsernameInput.classList.add('hidden');
+        DOMElements.authUsernameInput.required = false;
+        DOMElements.authSubmitBtn.textContent = 'Đăng Nhập';
+        DOMElements.authToggleText.innerHTML = 'Chưa có tài khoản? <span id="auth-toggle-link" class="link-style">Đăng ký ngay</span>';
+        DOMElements.authSubmitBtnText.textContent = 'Đăng Nhập';
+    }
+    document.getElementById('auth-toggle-link').addEventListener('click', toggleAuthMode);
+    if (!DOMElements.authUsernameInput.classList.contains('hidden')) {
+        DOMElements.authUsernameInput.focus();
+    } else {
+        DOMElements.authEmailInput.focus();
+    }
+}
+
+function validateAuthInput(event) {
+    const input = event.target;
+    let isValid = true;
+
+    if (input.id === 'auth-email') {
+        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value);
+    } else if (input.id === 'auth-password') {
+        isValid = input.value.length >= 6;
+    } else if (input.id === 'auth-username' && isRegisterMode) {
+        isValid = input.value.trim().length > 0;
+    }
+
+    if (isValid) {
+        input.classList.remove('invalid');
+    } else {
+        input.classList.add('invalid');
+    }
+    DOMElements.authError.classList.add('hidden');
+}
+
+function getFriendlyAuthError(error) {
+    if (error.message === "Vui lòng nhập tên hiển thị.") {
+        return error.message;
+    }
+    switch (error.code) {
+        case 'auth/user-not-found':
+            return 'Không tìm thấy người dùng với email này.';
+        case 'auth/wrong-password':
+            return 'Sai mật khẩu. Vui lòng thử lại.';
+        case 'auth/email-already-in-use':
+            return 'Email này đã được sử dụng.';
+        case 'auth/weak-password':
+            return 'Mật khẩu quá yếu. Vui lòng sử dụng ít nhất 6 ký tự.';
+        case 'auth/invalid-email':
+            return 'Địa chỉ email không hợp lệ.';
+        default:
+            return error.message;
+    }
+}
+
+async function handleAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file || !gameState.user) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Vui lòng chọn một file ảnh (JPEG, PNG).');
+        return;
+    }
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        alert('Kích thước file quá lớn. Vui lòng chọn ảnh dưới 5MB.');
+        return;
+    }
+
+    const statusEl = DOMElements.profileUploadStatus;
+    statusEl.textContent = 'Đang tải ảnh lên...';
+    statusEl.classList.remove('hidden');
+
+    try {
+        const fileExtension = file.name.split('.').pop();
+        const filePath = `avatars/${gameState.user.uid}/profile.${fileExtension}`;
+        const fileRef = storage.ref(filePath);
+
+        const uploadTask = await fileRef.put(file);
+        const downloadURL = await uploadTask.ref.getDownloadURL();
+
+        await auth.currentUser.updateProfile({ photoURL: downloadURL });
+
+        gameState.user.photoURL = downloadURL;
+        DOMElements.userAvatar.src = downloadURL;
+        DOMElements.profileAvatarPreview.src = downloadURL;
+
+        statusEl.textContent = 'Cập nhật avatar thành công!';
+        setTimeout(() => statusEl.classList.add('hidden'), 3000);
+    } catch (error) {
+        console.error("Avatar upload failed:", error);
+        statusEl.textContent = 'Tải ảnh lên thất bại. Vui lòng thử lại.';
+    }
+}
+
+auth.onAuthStateChanged(user => {
+    if (user) {
+        console.log("User signed in:", user.uid);
+        gameState.user = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || user.email.split('@')[0],
+            photoURL: user.photoURL,
+        };
+        gameState.playerId = user.uid;
+
+        DOMElements.userProfileContainer.classList.remove('hidden');
+        DOMElements.userAvatar.src = gameState.user.photoURL || DEFAULT_AVATAR;
+        DOMElements.userDisplayName.textContent = `Chào, ${gameState.user.displayName}`;
+
+        const savedRoomCode = localStorage.getItem('activeRoomCode');
+        if (savedRoomCode) {
+            console.log(`Found saved room ${savedRoomCode}, attempting to rejoin.`);
+            rejoinRoom(savedRoomCode);
+        } else {
+            DOMElements.authView.classList.add('hidden');
+            DOMElements.lobbyView.classList.remove('hidden');
+            DOMElements.mainModal.classList.add('visible');
+            DOMElements.gameContainer.classList.add('hidden');
+        }
+        resetInactivityTimer();
+    } else {
+        console.log("User signed out.");
+        gameState.user = null;
+        gameState.playerId = null;
+
+        localStorage.removeItem('activeRoomCode');
+        clearTimeout(inactivityTimer);
+
+        DOMElements.userProfileContainer.classList.add('hidden');
+        DOMElements.authView.classList.remove('hidden');
+        DOMElements.lobbyView.classList.add('hidden');
+        DOMElements.mainModal.classList.add('visible');
+        DOMElements.gameContainer.classList.add('hidden');
+    }
+    initializeGame(true);
+});
+
 function unlockAudio() {
     if (audioManager && audioManager.audioContext.state === 'suspended') {
         audioManager.audioContext.resume();
@@ -721,9 +1566,6 @@ function unlockAudio() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize game without forcing a reset, which will load saved state
-    // including the theme.
-    initializeGame(false);
-    // Add a one-time event listener to unlock the AudioContext on the first user interaction.
     document.body.addEventListener('click', unlockAudio, { once: true });
+    setupActivityListeners();
 });

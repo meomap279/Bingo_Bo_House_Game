@@ -92,42 +92,46 @@ h3 {
 .header-controls {
     position: absolute;
     top: 50%;
-    right: 1rem;
+    right: 2rem;
     transform: translateY(-50%);
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 .theme-selector {
     display: flex;
     gap: 0.5rem;
-    background-color: var(--color-glass-bg);
-    padding: 0.3rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.4rem;
     border-radius: 20px;
     border: 1px solid var(--color-glass-border);
 }
 
 .theme-btn {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    border: 2px solid var(--color-text-light);
+    border: 2px solid transparent;
     cursor: pointer;
     background-color: var(--theme-color);
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, border-color 0.2s;
 }
 
 .theme-btn:hover {
     transform: scale(1.1);
+    border-color: var(--color-text-light);
 }
 
 .sound-toggle-btn {
-    padding: 0.5rem;
-    font-size: 1.5rem;
-    width: 50px;
-    height: 50px;
-    background: var(--color-glass-bg);
+    padding: 0;
+    font-size: 1.2rem;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-glass-border);
+    box-shadow: none;
 }
 
 
@@ -686,4 +690,477 @@ h3 {
         height: 40px;
         font-size: 1.2rem;
     }
+}
+
+
+/* Multiplayer Modal Styles */
+
+.join-room-section {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 1.5rem;
+}
+
+#room-code-input {
+    flex-grow: 1;
+    padding: 0.8rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 8px;
+    color: var(--color-text-light);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    text-align: center;
+    text-transform: uppercase;
+    outline: none;
+    transition: box-shadow 0.3s;
+}
+
+#room-code-input::placeholder {
+    color: rgba(224, 224, 224, 0.5);
+    text-transform: none;
+}
+
+#room-code-input:focus {
+    box-shadow: var(--glow-strength-medium);
+}
+
+#room-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 350px;
+}
+
+#room-info-display {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+#room-code-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--theme-accent);
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    border: 2px dashed var(--theme-primary);
+    margin: 0.5rem 0;
+    letter-spacing: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#room-code-display:hover {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+#waiting-for-player-text {
+    margin-top: 1rem;
+    font-style: italic;
+    color: var(--color-neon-amber);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.7;
+    }
+}
+
+
+/* Lobby Settings */
+
+.room-setting-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.cyber-select {
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 8px;
+    color: var(--color-text-light);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    cursor: pointer;
+}
+
+.cyber-select:focus {
+    box-shadow: var(--glow-strength-medium);
+}
+
+
+/* Auth Form Styles */
+
+#auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 350px;
+}
+
+#auth-form input {
+    padding: 0.8rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 8px;
+    color: var(--color-text-light);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: box-shadow 0.3s;
+}
+
+#auth-form input:focus {
+    box-shadow: var(--glow-strength-medium);
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.auth-buttons .cyber-button {
+    flex: 1;
+}
+
+.error-message {
+    color: var(--color-error-red);
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+
+/* User Info in Header */
+
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--color-text-light);
+}
+
+.header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--theme-primary);
+    object-fit: cover;
+    background-color: var(--color-bg-dark);
+}
+
+#user-info {
+    cursor: pointer;
+}
+
+
+/* Profile Modal Styles */
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    min-width: 300px;
+}
+
+.avatar-upload-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 3px solid var(--theme-primary);
+    object-fit: cover;
+    box-shadow: var(--glow-strength-medium);
+    background-color: var(--color-bg-dark);
+}
+
+#profile-upload-status {
+    font-style: italic;
+    color: var(--color-neon-amber);
+}
+
+
+/* New User Profile Dropdown Styles */
+
+#user-profile-container {
+    position: relative;
+}
+
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 25px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-glass-border);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: var(--color-text-light);
+}
+
+#user-info:hover {
+    background-color: var(--color-glass-border);
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--theme-primary);
+    object-fit: cover;
+    background-color: var(--color-bg-dark);
+}
+
+#user-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 200px;
+    border-radius: 10px;
+    padding: 0.5rem;
+    z-index: 1100;
+    /* glassmorphism is applied via class */
+    box-shadow: var(--glow-strength-medium);
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-item {
+    background: none;
+    border: none;
+    color: var(--color-text-light);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.dropdown-item:hover {
+    background-color: var(--color-glass-border);
+}
+
+
+/* Auth Toggle Link */
+
+.link-style {
+    color: var(--theme-primary);
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.link-style:hover {
+    text-shadow: var(--glow-strength-light);
+}
+
+#auth-toggle-text {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+
+/* In-Game Room Info & Player List */
+
+#game-room-info {
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    color: var(--color-text-light);
+}
+
+#game-room-code {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    color: var(--theme-accent);
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 0.2rem 0.5rem;
+    border-radius: 5px;
+    letter-spacing: 2px;
+}
+
+#player-list-container {
+    margin-top: 1.5rem;
+    width: 100%;
+}
+
+#player-list-container h3 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: var(--theme-accent);
+}
+
+.player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.5rem;
+    border-radius: 8px;
+    border-left: 4px solid transparent;
+    transition: all 0.2s;
+}
+
+.player-item.is-host {
+    border-left-color: var(--theme-accent);
+}
+
+.player-item.is-offline {
+    opacity: 0.6;
+    filter: grayscale(50%);
+    border-left-color: #666 !important;
+}
+
+.player-item.is-offline .player-name::after {
+    content: ' (offline)';
+    font-style: italic;
+    font-weight: normal;
+}
+
+.player-name {
+    font-weight: bold;
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.host-icon {
+    margin-left: 0.5rem;
+    font-size: 1.2em;
+    color: var(--theme-accent);
+    text-shadow: var(--glow-strength-light);
+}
+
+.player-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #888;
+    /* Grey for not ready */
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    transition: all 0.3s;
+    flex-shrink: 0;
+    margin-left: auto;
+    /* Pushes the dot to the far right */
+}
+
+.player-status.is-ready {
+    background-color: var(--color-success-green);
+    box-shadow: 0 0 8px var(--color-success-green);
+}
+
+
+/* Turn Status Display */
+
+.turn-status {
+    padding: 0.75rem;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-glass-border);
+    text-align: center;
+    margin-top: 1.5rem;
+    width: 100%;
+}
+
+.turn-status p {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--theme-accent);
+    animation: pulse 2s infinite;
+}
+
+.is-my-turn .bingo-cell:not(.selected):hover {
+    cursor: pointer;
+    background-color: rgba(0, 242, 254, 0.2);
+    box-shadow: inset 0 0 15px var(--color-neon-cyan);
+}
+
+
+/* Turn Timer */
+
+#turn-timer-container {
+    width: 80%;
+    height: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+    margin: 0.75rem auto 0;
+    overflow: hidden;
+}
+
+#turn-timer-bar {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--color-neon-amber), var(--color-success-green));
+    border-radius: 5px;
+    transition: width 0.5s linear;
+}
+
+
+/* Lobby Waiting Room Styles */
+
+#lobby-player-list-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 1.5rem 0;
+}
+
+#lobby-player-list-container h3 {
+    color: var(--theme-accent);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+#lobby-player-list {
+    max-height: 190px;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+
 }
