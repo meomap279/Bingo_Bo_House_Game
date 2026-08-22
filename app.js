@@ -74,6 +74,7 @@ const DOMElements = {
     lobbyPlayerListContainer: document.getElementById('lobby-player-list-container'),
     lobbyPlayerList: document.getElementById('lobby-player-list'),
     startGameBtn: document.getElementById('start-game-btn'),
+    lobbyLeaveRoomBtn: document.getElementById('lobby-leave-room-btn'),
     roomCodeDisplay: document.getElementById('room-code-display'),
     leaveRoomBtn: document.getElementById('leave-room-btn'),
     // In-Game Info
@@ -94,7 +95,6 @@ const DOMElements = {
     // Game elements
     bingoGrid: document.getElementById('bingo-grid'),
     boardControls: document.getElementById('board-controls'),
-    newGameBtn: document.getElementById('new-game-btn'),
     randomFillBtn: document.getElementById('random-fill-btn'),
     lockBoardBtn: document.getElementById('lock-board-btn'),
     currentCalledNumber: document.getElementById('current-called-number'),
@@ -389,21 +389,25 @@ function triggerConfetti() {
 }
 
 function showVictoryModal(isWinner = true, winnerName = '') {
+    const winnerLabel = winnerName || 'Người chơi chiến thắng';
+
     if (isWinner) {
-        DOMElements.gameOverTitle.textContent = '🏆 BINGO! VICTORY! 🏆';
-        DOMElements.gameOverMessage.textContent = 'Chúc mừng bạn đã hoàn thành 5 đường BINGO!';
+        DOMElements.gameOverTitle.textContent = '🏆 VICTORY! 🏆';
+        DOMElements.gameOverMessage.textContent = `Người chiến thắng: ${winnerLabel}. Chúc mừng bạn đã hoàn thành BINGO!`;
         audioManager.playVictoryFanfare();
         triggerConfetti();
     } else {
         DOMElements.gameOverTitle.textContent = 'GAME OVER';
-        DOMElements.gameOverMessage.textContent = `Rất tiếc! ${winnerName} đã chiến thắng.`;
+        DOMElements.gameOverMessage.textContent = `Người chiến thắng: ${winnerLabel}. Đang chờ chủ phòng bắt đầu ván mới.`;
     }
 
-    // Cập nhật nút bấm dựa trên vai trò của người chơi
     if (gameState.playerRole === 'host') {
+        DOMElements.resetGameBtn.classList.remove('hidden');
+        DOMElements.resetGameBtn.disabled = false;
         DOMElements.resetGameBtn.querySelector('.button-text').textContent = '🔄 Chơi Ván Mới';
     } else {
-        DOMElements.resetGameBtn.querySelector('.button-text').textContent = 'OK';
+        DOMElements.resetGameBtn.classList.add('hidden');
+        DOMElements.resetGameBtn.disabled = true;
     }
 
     DOMElements.victoryModal.classList.remove('hidden');
@@ -501,9 +505,12 @@ function initializeGame(forceReset = false) {
     }
     DOMElements.roomActions.classList.remove('hidden');
     DOMElements.roomInfoDisplay.classList.add('hidden');
+    DOMElements.createRoomBtn.disabled = false;
+    DOMElements.joinRoomBtn.disabled = false;
     renderBingoGrid();
     DOMElements.startGameBtn.classList.add('hidden');
     DOMElements.startGameBtn.disabled = true;
+    DOMElements.lobbyLeaveRoomBtn.disabled = false;
     updateCallerDisplay();
     updateLinesCompletedDisplay();
     hideVictoryModal();
@@ -531,7 +538,7 @@ function fillBoardRandomly() {
 
 async function createRoom() {
     DOMElements.createRoomBtn.disabled = true;
-    const roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const roomCode = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
     gameState.roomCode = roomCode;
     gameState.playerRole = 'host';
     const maxPlayers = parseInt(DOMElements.maxPlayersSelect.value, 10);
@@ -577,9 +584,9 @@ async function createRoom() {
 }
 
 async function joinRoom() {
-    const roomCode = DOMElements.roomCodeInput.value.trim().toUpperCase();
-    if (roomCode.length !== 5) {
-        alert("Mã phòng phải có 5 ký tự.");
+    const roomCode = DOMElements.roomCodeInput.value.trim();
+    if (!/^\d{5}$/.test(roomCode)) {
+        alert("Mã phòng phải gồm đúng 5 số.");
         return;
     }
 
@@ -642,12 +649,36 @@ async function handleLeaveRoom() {
         await playerRef.onDisconnect().cancel();
         await playerRef.remove();
 
-        const roomSnapshot = await roomRef.once('value');
-        const roomData = roomSnapshot.val();
-        if (roomData && (!roomData.players || Object.keys(roomData.players).length === 0)) {
-            console.log(`Room ${roomCode} is empty, deleting it.`);
-            await roomRef.remove();
-        }
+        await roomRef.transaction(roomData => {
+            if (!roomData) return roomData;
+
+            const players = roomData.players || {};
+            const remainingPlayerIds = Object.keys(players);
+
+            if (remainingPlayerIds.length === 0) {
+                return null;
+            }
+
+            if (roomData.hostId === playerId) {
+                const newHostId = remainingPlayerIds[Math.floor(Math.random() * remainingPlayerIds.length)];
+                roomData.hostId = newHostId;
+
+                remainingPlayerIds.forEach(remainingPlayerId => {
+                    players[remainingPlayerId].role = remainingPlayerId === newHostId ? 'host' : 'guest';
+                });
+            }
+
+            if (Array.isArray(roomData.playerOrder)) {
+                roomData.playerOrder = roomData.playerOrder.filter(id => id !== playerId);
+            }
+
+            if (roomData.turn === playerId) {
+                roomData.turn = roomData.playerOrder && roomData.playerOrder.length > 0 ? roomData.playerOrder[0] : null;
+                roomData.turnStartedAt = Date.now();
+            }
+
+            return roomData;
+        });
     } catch (error) {
         console.error("Error during Firebase cleanup on leave:", error);
     } finally {
@@ -783,17 +814,13 @@ function updateTurnUI(roomData) {
     if (roomData.status !== 'playing') {
         DOMElements.turnStatusDisplay.classList.add('hidden');
         DOMElements.bingoGrid.classList.remove('is-my-turn');
-        // Hiển thị tất cả các nút điều khiển bảng khi không ở trong trận
         DOMElements.boardControls.classList.remove('hidden');
         DOMElements.randomFillBtn.disabled = gameState.isBoardLocked;
         DOMElements.lockBoardBtn.disabled = gameState.isBoardLocked;
-        DOMElements.newGameBtn.classList.remove('hidden');
         return;
     }
 
-    // --- Xử lý trạng thái 'playing' ---
     DOMElements.turnStatusDisplay.classList.remove('hidden');
-    DOMElements.newGameBtn.classList.add('hidden'); // Nút "Trò Chơi Mới" bị ẩn trong trận
     clearInterval(turnTimerInterval);
 
     // Nếu người chơi cục bộ chưa khóa bảng
@@ -888,6 +915,11 @@ function listenForGameEvents(roomCode) {
         const players = roomData.players || {};
         const playerCount = Object.keys(players).length;
         const maxPlayers = roomData.maxPlayers || 2;
+        const localPlayer = players[gameState.playerId];
+
+        if (localPlayer && localPlayer.role !== gameState.playerRole) {
+            gameState.playerRole = localPlayer.role;
+        }
 
         const previousStatus = gameState.roomStatus;
         gameState.roomStatus = roomData.status;
@@ -958,6 +990,9 @@ function listenForGameEvents(roomCode) {
                 const canStart = playerCount >= 2;
                 DOMElements.startGameBtn.disabled = !canStart;
                 DOMElements.startGameBtn.title = canStart ? 'Bắt đầu trận đấu' : 'Cần ít nhất 2 người chơi trong phòng.';
+            } else {
+                DOMElements.startGameBtn.classList.add('hidden');
+                DOMElements.startGameBtn.disabled = true;
             }
         }
 
@@ -968,14 +1003,14 @@ function listenForGameEvents(roomCode) {
         updateTurnUI(roomData);
 
         // Handle Game Over
-        if (roomData.status === 'finished' && roomData.winner && !gameState.isGameOver) {
+        if (roomData.status === 'finished' && roomData.winner && !DOMElements.victoryModal.classList.contains('visible')) {
             gameState.isGameOver = true;
             DOMElements.bingoGrid.classList.add('locked');
             DOMElements.turnStatusDisplay.classList.add('hidden');
             clearInterval(turnTimerInterval);
 
             if (roomData.winner.playerId === gameState.playerId) {
-                showVictoryModal(true);
+                showVictoryModal(true, roomData.winner.displayName);
             } else {
                 showVictoryModal(false, roomData.winner.displayName);
             }
@@ -1098,6 +1133,8 @@ async function handleNewRoundByHost() {
 
     await roomRef.update({
         status: 'waiting',
+        lastWinnerId: roomData.winner ? roomData.winner.playerId : roomData.lastWinnerId || null,
+        lastWinnerName: roomData.winner ? roomData.winner.displayName : roomData.lastWinnerName || null,
         winner: null,
         calledNumbers: {},
         turn: null,
@@ -1121,6 +1158,11 @@ async function handleStartGameClick() {
         return;
     }
 
+    if (playerIds.length > 5) {
+        alert("Phòng chỉ hỗ trợ tối đa 5 người chơi.");
+        return;
+    }
+
     // Reset trạng thái isReady cho tất cả người chơi cho vòng mới
     const playerUpdates = {};
     playerIds.forEach(pid => {
@@ -1128,8 +1170,14 @@ async function handleStartGameClick() {
     });
     await roomRef.update(playerUpdates);
 
-    // Xáo trộn thứ tự người chơi cho công bằng
-    const playerOrder = shuffleArray(playerIds);
+    const hostId = roomData.hostId || gameState.playerId;
+    const firstPlayerId = roomData.lastWinnerId && playerIds.includes(roomData.lastWinnerId)
+        ? roomData.lastWinnerId
+        : hostId;
+    const playerOrder = [
+        firstPlayerId,
+        ...playerIds.filter(playerId => playerId !== firstPlayerId)
+    ];
 
     const updates = {
         status: 'playing', // Trò chơi bắt đầu, người chơi thấy bảng
@@ -1206,6 +1254,8 @@ function checkWinConditions(isInitialLoad = false) {
         const roomRef = database.ref('rooms/' + gameState.roomCode);
         roomRef.update({
             status: 'finished',
+            lastWinnerId: gameState.playerId,
+            lastWinnerName: gameState.user.displayName,
             winner: {
                 playerId: gameState.playerId,
                 displayName: gameState.user.displayName
@@ -1300,19 +1350,19 @@ DOMElements.randomFillBtn.addEventListener('click', fillBoardRandomly);
 DOMElements.createRoomBtn.addEventListener('click', createRoom);
 DOMElements.joinRoomBtn.addEventListener('click', joinRoom);
 DOMElements.leaveRoomBtn.addEventListener('click', handleLeaveRoom);
+DOMElements.lobbyLeaveRoomBtn.addEventListener('click', handleLeaveRoom);
 DOMElements.startGameBtn.addEventListener('click', handleStartGameClick);
 DOMElements.closeProfileModalBtn.addEventListener('click', closeProfileModal);
 DOMElements.lockBoardBtn.addEventListener('click', validateAndLockBoard);
 DOMElements.resetGameBtn.addEventListener('click', () => {
-    if (gameState.playerRole === 'host') {
-        handleNewRoundByHost();
-    }
-    hideVictoryModal();
-});
-DOMElements.newGameBtn.addEventListener('click', () => {
-    if (confirm('Bạn có chắc chắn muốn quay về sảnh chính? Toàn bộ tiến trình hiện tại sẽ bị xóa.')) {
-        initializeGame(true);
-    }
+    if (gameState.playerRole !== 'host') return;
+
+    DOMElements.resetGameBtn.disabled = true;
+    handleNewRoundByHost().catch(error => {
+        console.error('Failed to start new round:', error);
+        DOMElements.resetGameBtn.disabled = false;
+        alert('Không thể bắt đầu ván mới. Vui lòng thử lại.');
+    });
 });
 
 DOMElements.toggleSoundBtn.addEventListener('click', () => {

@@ -57,7 +57,7 @@
                         <span class="button-text">Tạo Phòng Mới</span>
                     </button>
                     <div class="join-room-section">
-                        <input type="text" id="room-code-input" placeholder="NHẬP MÃ PHÒNG" maxlength="5">
+                        <input type="text" id="room-code-input" placeholder="NHẬP MÃ PHÒNG" maxlength="5" inputmode="numeric" pattern="[0-9]*">
                         <button id="join-room-btn" class="cyber-button ripple">
                             <span class="button-text">Vào Phòng</span>
                         </button>
@@ -72,15 +72,14 @@
                     </div>
                     <p id="waiting-for-player-text">Đang chờ người chơi...</p>
                     <button id="start-game-btn" class="cyber-button ripple hidden">Bắt Đầu Trận Đấu</button>
+                    <button id="lobby-leave-room-btn" class="cyber-button ripple">Rời Phòng</button>
                 </div>
             </div>
         </div>
     </div>
     <header class="cyber-header">
         <div class="brand-block">
-            <p class="eyebrow">Realtime Multiplayer</p>
             <h1>BINGO BƠ HOUSE GAME</h1>
-            <p class="brand-subtitle">Đấu trí cùng bạn bè trên mọi thiết bị</p>
         </div>
         <div class="header-controls">
             <div class="theme-selector">
@@ -162,10 +161,6 @@
         <section id="bingo-arena" class="panel glassmorphism">
             <h2 class="panel-title">Bảng BINGO Của Bạn</h2>
             <div id="board-controls" class="board-controls">
-                <button id="new-game-btn" class="cyber-button ripple">
-                    <span class="button-text">🔄 Trò Chơi Mới</span>
-                    <span class="button-icon"></span>
-                </button>
                 <button id="random-fill-btn" class="cyber-button ripple">
                     <span class="button-text">⚡ Random Điền Bảng</span>
                     <span class="button-icon"></span>
