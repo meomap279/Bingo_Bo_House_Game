@@ -184,12 +184,49 @@
                 </svg>
             </div>
             <div class="game-status">
-                <p>Đường hoàn thành: <span id="lines-completed-count-text">0</span>/12</p>
+                <p>Đường hoàn thành: <span id="lines-completed-count-text">0</span>/5</p>
                 <div class="progress-bar-container">
                     <div id="lines-progress-bar" class="progress-bar"></div>
                 </div>
             </div>
         </section>
+
+        <!-- Chat Panel -->
+        <aside id="chat-panel" class="panel chat-panel glassmorphism hidden">
+            <div class="chat-header">
+                <div class="chat-header-left">
+                    <span class="chat-title">💬 Trò chuyện</span>
+                    <span id="chat-unread-badge" class="chat-unread-badge hidden">0</span>
+                </div>
+                <button id="chat-toggle-btn" class="chat-icon-btn" title="Thu gọn">▾</button>
+            </div>
+            <div id="chat-messages" class="chat-messages custom-scrollbar"></div>
+            <div id="chat-emoji-popup" class="chat-emoji-popup hidden">
+                <button class="emoji-btn">😀</button>
+                <button class="emoji-btn">😂</button>
+                <button class="emoji-btn">😍</button>
+                <button class="emoji-btn">😎</button>
+                <button class="emoji-btn">😡</button>
+                <button class="emoji-btn">👍</button>
+                <button class="emoji-btn">👏</button>
+                <button class="emoji-btn">🎉</button>
+                <button class="emoji-btn">🔥</button>
+                <button class="emoji-btn">💯</button>
+                <button class="emoji-btn">❤️</button>
+                <button class="emoji-btn">🥳</button>
+                <button class="emoji-btn">🤔</button>
+                <button class="emoji-btn">😴</button>
+                <button class="emoji-btn">🤡</button>
+                <button class="emoji-btn">💪</button>
+                <button class="emoji-btn">🙌</button>
+                <button class="emoji-btn">✨</button>
+            </div>
+            <form id="chat-form" class="chat-form">
+                <button type="button" id="chat-emoji-btn" class="chat-emoji-trigger" title="Emoji">😊</button>
+                <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." maxlength="200" autocomplete="off">
+                <button type="submit" id="chat-send-btn" class="chat-send-btn" title="Gửi">➤</button>
+            </form>
+        </aside>
     </main>
 
     <!-- Victory Modal -->
