@@ -1,0 +1,82 @@
+{
+  "rules": {
+    "rooms": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$roomCode": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "players": {
+          "$uid": {
+            ".write": "auth != null"
+          }
+        },
+        "spectators": {
+          "$uid": {
+            ".write": "auth != null"
+          }
+        },
+        "chat": {
+          "$msgId": {
+            ".write": "auth != null",
+            ".validate": "newData.child('uid').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 200"
+          }
+        },
+        "voice": {
+          "$toId": {
+            "$fromId": {
+              ".write": "auth != null"
+            }
+          }
+        },
+        "replay": {
+          ".write": "auth != null"
+        },
+        "eliminationLog": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "users": {
+      ".read": "auth != null",
+      ".indexOn": ["displayNameLowercase", "bingoIdLowercase"],
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && (data.exists() || $uid === auth.uid)",
+        "displayName": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 30"
+        },
+        "displayNameLowercase": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 30"
+        },
+        "photoURL": {
+          ".validate": "newData.isString() && newData.val().beginsWith('https://')"
+        },
+        "bingoId": {
+          ".validate": "newData.isString() && newData.val().matches(/^@[a-z0-9]{1,16}[0-9]{4}$/)"
+        },
+        "bingoIdLowercase": {
+          ".validate": "newData.isString() && newData.val().matches(/^@[a-z0-9]{1,16}[0-9]{4}$/)"
+        },
+        "status": {
+          ".write": "$uid === auth.uid"
+        },
+        "friends": {
+          ".write": "$uid === auth.uid",
+          "$friendUid": {
+            ".validate": "newData.hasChildren(['displayName', 'since']) && newData.child('displayName').isString()"
+          }
+        },
+        "friendInvites": {
+          ".write": "$uid === auth.uid",
+          ".indexOn": ["fromUid", "at"]
+        },
+        "roomInvites": {
+          ".write": "$uid === auth.uid",
+          ".indexOn": ["fromUid", "at"]
+        }
+      }
+    },
+    ".indexOn": ["displayNameLowercase", "bingoIdLowercase"]
+  }
+}

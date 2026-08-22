@@ -81,6 +81,10 @@ const DOMElements = {
     lobbyReadyBtn: document.getElementById('lobby-ready-btn'),
     lobbyLeaveRoomBtn: document.getElementById('lobby-leave-room-btn'),
     lobbyLogoutBtn: document.getElementById('lobby-logout-btn'),
+    lobbyUserBar: document.getElementById('lobby-user-bar'),
+    lobbyUserAvatar: document.getElementById('lobby-user-avatar'),
+    lobbyUserName: document.getElementById('lobby-user-name'),
+    lobbyUserBingoId: document.getElementById('lobby-user-bingo-id'),
     preRoomLogoutBtn: document.getElementById('pre-room-logout-btn'),
     gameLogoutBtn: document.getElementById('game-logout-btn'),
     roomCodeDisplay: document.getElementById('room-code-display'),
@@ -89,6 +93,7 @@ const DOMElements = {
     // Chat
     chatPanel: document.getElementById('chat-panel'),
     chatToggleBtn: document.getElementById('chat-toggle-btn'),
+    toastContainer: document.getElementById('toast-container'),
     chatMessages: document.getElementById('chat-messages'),
     chatForm: document.getElementById('chat-form'),
     chatInput: document.getElementById('chat-input'),
@@ -112,6 +117,8 @@ const DOMElements = {
     profileAvatarPreview: document.getElementById('profile-avatar-preview'),
     avatarUploadInput: document.getElementById('avatar-upload-input'),
     profileUploadStatus: document.getElementById('profile-upload-status'),
+    profileBingoId: document.getElementById('profile-bingo-id'),
+    copyBingoIdBtn: document.getElementById('copy-bingo-id-btn'),
     // Friends
     openFriendsBtn: document.getElementById('open-friends-btn'),
     friendInviteBadge: document.getElementById('friend-invite-badge'),
@@ -145,6 +152,48 @@ const DOMElements = {
     gameOverMessage: document.getElementById('game-over-message'),
     resetGameBtn: document.getElementById('reset-game-btn'),
     toggleSoundBtn: document.getElementById('toggle-sound-btn'),
+    headerFriendsContainer: document.getElementById('header-friends-container'),
+    headerFriendsBtn: document.getElementById('header-friends-btn'),
+    headerFriendsPopup: document.getElementById('header-friends-popup'),
+    headerFriendsCount: document.getElementById('header-friends-count'),
+    headerFriendsList: document.getElementById('header-friends-list'),
+    headerFriendsEmpty: document.getElementById('header-friends-empty'),
+    headerFriendsOpenModal: document.getElementById('header-friends-open-modal'),
+    headerFriendsTabs: document.querySelectorAll('.header-friends-tab'),
+    headerFriendsListPanel: document.getElementById('header-friends-list-panel'),
+    headerFriendsAddPanel: document.getElementById('header-friends-add-panel'),
+    headerFriendsInvitesPanel: document.getElementById('header-friends-invites-panel'),
+    headerFriendsSearch: document.getElementById('header-friends-search'),
+    headerInviteTabBadge: document.getElementById('header-invite-tab-badge'),
+    headerAddFriendInput: document.getElementById('header-add-friend-input'),
+    headerAddFriendBtn: document.getElementById('header-add-friend-btn'),
+    headerAddFriendResults: document.getElementById('header-add-friend-results'),
+    headerAddFriendHint: document.getElementById('header-add-friend-hint'),
+    headerFriendsInvitesList: document.getElementById('header-friends-invites-list'),
+    headerFriendsInvitesEmpty: document.getElementById('header-friends-invites-empty'),
+    // Lobby Friends Modal
+    lobbyOpenFriendsBtn: document.getElementById('lobby-open-friends-btn'),
+    lobbyFriendsModal: document.getElementById('lobby-friends-modal'),
+    closeLobbyFriendsModalBtn: document.getElementById('close-lobby-friends-modal-btn'),
+    lobbyFriendBadge: document.getElementById('lobby-friend-badge'),
+    lobbyFriendInviteBadge: document.getElementById('lobby-friend-invite-badge'),
+    lobbyFriendsTabs: document.querySelectorAll('#lobby-friends-modal .header-friends-tab'),
+    lobbyFriendsOnlinePanel: document.getElementById('lobby-friends-online-panel'),
+    lobbyFriendsAllPanel: document.getElementById('lobby-friends-all-panel'),
+    lobbyFriendsAddPanel: document.getElementById('lobby-friends-add-panel'),
+    lobbyFriendsInvitesPanel: document.getElementById('lobby-friends-invites-panel'),
+    lobbyFriendsSearch: document.getElementById('lobby-friends-search'),
+    lobbyFriendsAllSearch: document.getElementById('lobby-friends-all-search'),
+    lobbyAddFriendInput: document.getElementById('lobby-add-friend-input'),
+    lobbyAddFriendBtn: document.getElementById('lobby-add-friend-btn'),
+    lobbyAddFriendResults: document.getElementById('lobby-add-friend-results'),
+    lobbyAddFriendHint: document.getElementById('lobby-add-friend-hint'),
+    lobbyFriendsOnlineList: document.getElementById('lobby-friends-online-list'),
+    lobbyFriendsOnlineEmpty: document.getElementById('lobby-friends-online-empty'),
+    lobbyFriendsAllList: document.getElementById('lobby-friends-all-list'),
+    lobbyFriendsAllEmpty: document.getElementById('lobby-friends-all-empty'),
+    lobbyFriendsInvitesList: document.getElementById('lobby-friends-invites-list'),
+    lobbyFriendsInvitesEmpty: document.getElementById('lobby-friends-invites-empty'),
     themeSelector: document.querySelector('.theme-selector'),
     linesCompletedCountText: document.getElementById('lines-completed-count-text'),
     linesProgressBar: document.getElementById('lines-progress-bar'),
@@ -956,6 +1005,76 @@ function cleanupVoice() {
     setVoiceButton(false);
 }
 
+/* ===== Toast Notifications ===== */
+function showToast(options) {
+    if (!DOMElements || !DOMElements.toastContainer) return null;
+    const { title, message, photoURL, type = 'info', actions = [], duration = 6000 } = options || {};
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type === 'room' ? ' is-room' : '');
+    const header = document.createElement('div');
+    header.className = 'toast-header';
+    if (photoURL) {
+        const img = document.createElement('img');
+        img.src = photoURL;
+        img.alt = '';
+        header.appendChild(img);
+    }
+    const info = document.createElement('div');
+    info.className = 'toast-info';
+    if (title) {
+        const t = document.createElement('p');
+        t.className = 'toast-title';
+        t.textContent = title;
+        info.appendChild(t);
+    }
+    if (message) {
+        const m = document.createElement('p');
+        m.className = 'toast-message';
+        m.textContent = message;
+        info.appendChild(m);
+    }
+    header.appendChild(info);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.textContent = '✕';
+    closeBtn.title = 'Đóng';
+    header.appendChild(closeBtn);
+    toast.appendChild(header);
+
+    if (actions.length) {
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'toast-actions';
+        actions.forEach(act => {
+            const btn = document.createElement('button');
+            btn.textContent = act.label;
+            btn.className = act.variant === 'accept' ? 'toast-accept' : (act.variant === 'reject' ? 'toast-reject' : '');
+            btn.addEventListener('click', () => {
+                try { act.onClick && act.onClick(); } catch (e) { console.error(e); }
+                removeToast(toast);
+            });
+            actionsEl.appendChild(btn);
+        });
+        toast.appendChild(actionsEl);
+    }
+
+    DOMElements.toastContainer.appendChild(toast);
+
+    const remove = () => removeToast(toast);
+    closeBtn.addEventListener('click', remove);
+    if (duration > 0) {
+        setTimeout(remove, duration);
+    }
+    return toast;
+}
+
+function removeToast(toast) {
+    if (!toast) return;
+    toast.classList.add('is-leaving');
+    setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 260);
+}
+
 function showMultiplayerModal() {
     DOMElements.mainModal.classList.add('visible');
     DOMElements.gameContainer.classList.add('hidden');
@@ -966,10 +1085,36 @@ function hideMultiplayerModal() {
     DOMElements.gameContainer.classList.remove('hidden');
 }
 
-function openProfileModal() {
+async function updateLobbyUserBar() {
+    if (DOMElements.lobbyUserAvatar) {
+        DOMElements.lobbyUserAvatar.src = (gameState.user && gameState.user.photoURL) || DEFAULT_AVATAR;
+    }
+    if (DOMElements.lobbyUserName) {
+        DOMElements.lobbyUserName.textContent = (gameState.user && gameState.user.displayName) || 'Người chơi';
+    }
+    if (DOMElements.lobbyUserBingoId) {
+        DOMElements.lobbyUserBingoId.textContent = (gameState.user && gameState.user.bingoId) || 'Đang tạo...';
+    }
+}
+
+async function openProfileModal() {
     DOMElements.profileAvatarPreview.src = (gameState.user && gameState.user.photoURL) || DEFAULT_AVATAR;
     DOMElements.profileModal.classList.remove('hidden');
     DOMElements.profileModal.classList.add('visible');
+    if (DOMElements.profileBingoId) {
+        DOMElements.profileBingoId.textContent = (gameState.user && gameState.user.bingoId) || 'Đang tạo...';
+    }
+    // Đảm bảo có bingoId (cho user cũ) và cập nhật text khi xong
+    if (gameState.user && gameState.user.uid) {
+        try {
+            await ensureBingoId();
+            if (DOMElements.profileBingoId) {
+                DOMElements.profileBingoId.textContent = gameState.user.bingoId || '';
+            }
+        } catch (e) {
+            console.error('Failed to ensure bingo id:', e);
+        }
+    }
 }
 
 function closeProfileModal() {
@@ -983,13 +1128,162 @@ const friendsState = {
     friends: {},
     invites: {}, // friendInvites gửi đến mình
     roomInvites: {}, // roomInvites gửi đến mình
+    sentInvites: {}, // Lời mời mình đã gửi đi (cache để hiển thị trạng thái)
     friendStatuses: {}, // uid -> { online, lastSeen }
     lastNotifiedInviteIds: new Set(),
     lastNotifiedRoomInviteIds: new Set(),
 };
 
+function switchHeaderFriendsTab(tabName) {
+    if (!DOMElements.headerFriendsTabs) return;
+    DOMElements.headerFriendsTabs.forEach(tab => {
+        tab.classList.toggle('is-active', tab.dataset.tab === tabName);
+    });
+    if (DOMElements.headerFriendsListPanel) DOMElements.headerFriendsListPanel.classList.toggle('hidden', tabName !== 'list');
+    if (DOMElements.headerFriendsAddPanel) DOMElements.headerFriendsAddPanel.classList.toggle('hidden', tabName !== 'add');
+    if (DOMElements.headerFriendsInvitesPanel) DOMElements.headerFriendsInvitesPanel.classList.toggle('hidden', tabName !== 'invites');
+    if (tabName === 'invites') renderHeaderInvites();
+    if (tabName === 'list') renderHeaderFriendsList();
+}
+
+function toggleHeaderFriendsPopup(force) {
+    if (!DOMElements.headerFriendsPopup || !DOMElements.headerFriendsBtn) return;
+    const willShow = typeof force === 'boolean'
+        ? force
+        : DOMElements.headerFriendsPopup.classList.contains('hidden');
+    if (willShow) {
+        DOMElements.headerFriendsPopup.classList.remove('hidden');
+        DOMElements.headerFriendsBtn.classList.add('is-active');
+        switchHeaderFriendsTab('list');
+    } else {
+        DOMElements.headerFriendsPopup.classList.add('hidden');
+        DOMElements.headerFriendsBtn.classList.remove('is-active');
+    }
+}
+
+function renderHeaderFriendsList() {
+    if (!DOMElements.headerFriendsList) return;
+    DOMElements.headerFriendsList.innerHTML = '';
+    const allFriends = Object.entries(friendsState.friends || {});
+    const onlineFriends = allFriends.filter(([uid]) => friendsState.friendStatuses[uid] && friendsState.friendStatuses[uid].online);
+
+    if (DOMElements.headerFriendsCount) {
+        DOMElements.headerFriendsCount.textContent = onlineFriends.length;
+    }
+    if (DOMElements.headerFriendsEmpty) {
+        DOMElements.headerFriendsEmpty.classList.toggle('hidden', allFriends.length > 0);
+    }
+    if (allFriends.length === 0) return;
+
+    const filter = DOMElements.headerFriendsSearch ? DOMElements.headerFriendsSearch.value.trim().toLowerCase() : '';
+    const list = filter
+        ? allFriends.filter(([_, f]) => f.displayName && f.displayName.toLowerCase().includes(filter))
+        : allFriends;
+
+    list.forEach(([uid, friend]) => {
+        if (!friend) return;
+        const status = friendsState.friendStatuses[uid] || {};
+        const isOnline = !!status.online;
+        const item = document.createElement('div');
+        item.className = 'header-friend-item' + (isOnline ? ' is-online' : '');
+        item.innerHTML = `
+            <img src="${friend.photoURL || DEFAULT_AVATAR}" alt="">
+            <div class="header-friend-info">
+                <span class="header-friend-name">${friend.displayName || 'Người chơi'}</span>
+                <span class="header-friend-bingo">${friend.bingoId || ''}</span>
+            </div>
+            <span class="friend-status ${isOnline ? 'is-online' : ''}">${isOnline ? 'Online' : 'Offline'}</span>
+            <div class="header-friend-actions">
+                <button class="mini-btn header-friend-invite-btn" data-uid="${uid}" ${!isOnline ? 'disabled title="Bạn bè đang offline"' : 'title="Mời vào phòng"'}>🎮 Mời</button>
+                <button class="mini-btn is-danger header-friend-remove-btn" data-uid="${uid}" title="Xoá bạn">Xoá</button>
+            </div>
+        `;
+        DOMElements.headerFriendsList.appendChild(item);
+    });
+    DOMElements.headerFriendsList.querySelectorAll('.header-friend-invite-btn').forEach(btn => {
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            inviteFriendToRoom(btn.dataset.uid);
+        });
+    });
+    DOMElements.headerFriendsList.querySelectorAll('.header-friend-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            removeFriend(btn.dataset.uid);
+        });
+    });
+}
+
+function renderHeaderInvites() {
+    if (!DOMElements.headerFriendsInvitesList) return;
+    DOMElements.headerFriendsInvitesList.innerHTML = '';
+    const friendInvites = Object.entries(friendsState.invites);
+    const roomInvites = Object.entries(friendsState.roomInvites);
+
+    if (DOMElements.headerFriendsInvitesEmpty) {
+        DOMElements.headerFriendsInvitesEmpty.classList.toggle('hidden', friendInvites.length + roomInvites.length > 0);
+    }
+
+    const totalInvites = friendInvites.length + roomInvites.length;
+    if (DOMElements.headerInviteTabBadge) {
+        if (totalInvites > 0) {
+            DOMElements.headerInviteTabBadge.textContent = totalInvites > 99 ? '99+' : String(totalInvites);
+            DOMElements.headerInviteTabBadge.classList.remove('hidden');
+        } else {
+            DOMElements.headerInviteTabBadge.classList.add('hidden');
+        }
+    }
+
+    friendInvites.forEach(([inviteId, invite]) => {
+        const item = document.createElement('div');
+        item.className = 'header-friend-item';
+        item.innerHTML = `
+            <img src="${invite.photoURL || DEFAULT_AVATAR}" alt="">
+            <div class="header-friend-info">
+                <span class="header-friend-name">${invite.displayName || 'Người chơi'}</span>
+                <span class="header-friend-bingo">Muốn kết bạn</span>
+            </div>
+            <div class="header-friend-actions">
+                <button class="mini-btn header-friend-accept-btn" data-id="${inviteId}">Chấp nhận</button>
+                <button class="mini-btn is-danger header-friend-reject-btn" data-id="${inviteId}">Từ chối</button>
+            </div>
+        `;
+        DOMElements.headerFriendsInvitesList.appendChild(item);
+    });
+    roomInvites.forEach(([inviteId, invite]) => {
+        const item = document.createElement('div');
+        item.className = 'header-friend-item';
+        item.innerHTML = `
+            <img src="${invite.photoURL || DEFAULT_AVATAR}" alt="">
+            <div class="header-friend-info">
+                <span class="header-friend-name">${invite.displayName || 'Người chơi'}</span>
+                <span class="header-friend-bingo">Mời vào #${invite.roomCode}</span>
+            </div>
+            <div class="header-friend-actions">
+                <button class="mini-btn header-room-accept-btn" data-id="${inviteId}">Vào</button>
+                <button class="mini-btn is-danger header-room-reject-btn" data-id="${inviteId}">X</button>
+            </div>
+        `;
+        DOMElements.headerFriendsInvitesList.appendChild(item);
+    });
+
+    DOMElements.headerFriendsInvitesList.querySelectorAll('.header-friend-accept-btn').forEach(btn => {
+        btn.addEventListener('click', () => acceptFriendInvite(btn.dataset.id));
+    });
+    DOMElements.headerFriendsInvitesList.querySelectorAll('.header-friend-reject-btn').forEach(btn => {
+        btn.addEventListener('click', () => rejectFriendInvite(btn.dataset.id));
+    });
+    DOMElements.headerFriendsInvitesList.querySelectorAll('.header-room-accept-btn').forEach(btn => {
+        btn.addEventListener('click', () => acceptRoomInvite(btn.dataset.id));
+    });
+    DOMElements.headerFriendsInvitesList.querySelectorAll('.header-room-reject-btn').forEach(btn => {
+        btn.addEventListener('click', () => rejectRoomInvite(btn.dataset.id));
+    });
+}
+
 function updateInviteBadges() {
     const inviteCount = Object.keys(friendsState.invites).length + Object.keys(friendsState.roomInvites).length;
+    updateLobbyFriendBadges();
     if (DOMElements.friendInviteBadge) {
         if (inviteCount > 0) {
             DOMElements.friendInviteBadge.textContent = inviteCount > 99 ? '99+' : String(inviteCount);
@@ -1015,6 +1309,10 @@ function openFriendsModal() {
     DOMElements.friendsModal.classList.add('visible');
     switchFriendsTab('friends');
     renderFriendsList();
+    renderHeaderFriendsList();
+    renderLobbyFriendsOnline();
+    renderLobbyFriendsAll();
+    renderLobbyFriendsInvites();
     renderInvitesList();
 }
 
@@ -1022,6 +1320,193 @@ function closeFriendsModal() {
     if (!DOMElements.friendsModal) return;
     DOMElements.friendsModal.classList.remove('visible');
     DOMElements.friendsModal.classList.add('hidden');
+}
+
+/* ===== Lobby Friends Modal ===== */
+
+function switchLobbyFriendsTab(tabName) {
+    if (!DOMElements.lobbyFriendsTabs) return;
+    DOMElements.lobbyFriendsTabs.forEach(tab => {
+        tab.classList.toggle('is-active', tab.dataset.tab === tabName);
+    });
+    if (DOMElements.lobbyFriendsOnlinePanel) DOMElements.lobbyFriendsOnlinePanel.classList.toggle('hidden', tabName !== 'online');
+    if (DOMElements.lobbyFriendsAllPanel) DOMElements.lobbyFriendsAllPanel.classList.toggle('hidden', tabName !== 'all');
+    if (DOMElements.lobbyFriendsAddPanel) DOMElements.lobbyFriendsAddPanel.classList.toggle('hidden', tabName !== 'add');
+    if (DOMElements.lobbyFriendsInvitesPanel) DOMElements.lobbyFriendsInvitesPanel.classList.toggle('hidden', tabName !== 'invites');
+    if (tabName === 'online') renderLobbyFriendsOnline();
+    if (tabName === 'all') renderLobbyFriendsAll();
+    if (tabName === 'invites') renderLobbyFriendsInvites();
+}
+
+function openLobbyFriendsModal() {
+    if (!DOMElements.lobbyFriendsModal) return;
+    DOMElements.lobbyFriendsModal.classList.remove('hidden');
+    DOMElements.lobbyFriendsModal.classList.add('visible');
+    switchLobbyFriendsTab('online');
+}
+
+function closeLobbyFriendsModal() {
+    if (!DOMElements.lobbyFriendsModal) return;
+    DOMElements.lobbyFriendsModal.classList.remove('visible');
+    DOMElements.lobbyFriendsModal.classList.add('hidden');
+}
+
+function buildLobbyFriendItemHTML(uid, friend, options) {
+    options = options || {};
+    const avatar = friend.photoURL || DEFAULT_AVATAR;
+    const name = friend.displayName || 'Người chơi';
+    const bingoId = friend.bingoId || '';
+    const isOnline = options.isOnline !== undefined ? options.isOnline : !!(friendsState.friendStatuses[uid] && friendsState.friendStatuses[uid].online);
+    let actions = '';
+    if (options.inviteMode) {
+        actions = `<button class="mini-btn lobby-friend-invite-btn" data-uid="${uid}" ${!isOnline ? 'disabled title="Bạn bè đang offline"' : 'title="Mời vào phòng"'}>🎮 Mời</button>`;
+    } else if (options.inviteActions) {
+        actions = `<button class="mini-btn lobby-friend-invite-btn" data-uid="${uid}" ${!isOnline ? 'disabled' : ''}>🎮 Mời</button>
+                    <button class="mini-btn is-danger lobby-friend-remove-btn" data-uid="${uid}">Xoá</button>`;
+    } else if (options.ketBanBtn) {
+        actions = `<button class="mini-btn lobby-add-friend-send-btn" data-uid="${uid}">➕ Kết bạn</button>`;
+    }
+    const statusHtml = options.showStatus !== false
+        ? `<span class="friend-status ${isOnline ? 'is-online' : ''}">${isOnline ? 'Online' : 'Offline'}</span>`
+        : '';
+    return `
+        <img src="${avatar}" alt="">
+        <div class="header-friend-info">
+            <span class="header-friend-name">${name}</span>
+            <span class="header-friend-bingo">${bingoId}</span>
+        </div>
+        ${statusHtml}
+        <div class="header-friend-actions">${actions}</div>
+    `;
+}
+
+function renderLobbyFriendsOnline() {
+    if (!DOMElements.lobbyFriendsOnlineList) return;
+    DOMElements.lobbyFriendsOnlineList.innerHTML = '';
+    const friends = Object.entries(friendsState.friends || {});
+    const onlineFriends = friends.filter(([uid]) => friendsState.friendStatuses[uid] && friendsState.friendStatuses[uid].online);
+    const filter = DOMElements.lobbyFriendsSearch ? DOMElements.lobbyFriendsSearch.value.trim().toLowerCase() : '';
+    const list = filter
+        ? onlineFriends.filter(([_, f]) => f.displayName && f.displayName.toLowerCase().includes(filter))
+        : onlineFriends;
+    if (DOMElements.lobbyFriendsOnlineEmpty) {
+        DOMElements.lobbyFriendsOnlineEmpty.classList.toggle('hidden', onlineFriends.length > 0);
+    }
+    if (list.length === 0) return;
+    list.forEach(([uid, friend]) => {
+        const item = document.createElement('div');
+        item.className = 'header-friend-item is-online';
+        item.innerHTML = buildLobbyFriendItemHTML(uid, friend, { inviteMode: true, isOnline: true });
+        DOMElements.lobbyFriendsOnlineList.appendChild(item);
+    });
+    DOMElements.lobbyFriendsOnlineList.querySelectorAll('.lobby-friend-invite-btn').forEach(btn => {
+        btn.addEventListener('click', () => inviteFriendToRoom(btn.dataset.uid));
+    });
+}
+
+function renderLobbyFriendsAll() {
+    if (!DOMElements.lobbyFriendsAllList) return;
+    DOMElements.lobbyFriendsAllList.innerHTML = '';
+    const allFriends = Object.entries(friendsState.friends || {});
+    if (DOMElements.lobbyFriendsAllEmpty) {
+        DOMElements.lobbyFriendsAllEmpty.classList.toggle('hidden', allFriends.length > 0);
+    }
+    if (allFriends.length === 0) return;
+    const filter = DOMElements.lobbyFriendsAllSearch ? DOMElements.lobbyFriendsAllSearch.value.trim().toLowerCase() : '';
+    const list = filter
+        ? allFriends.filter(([_, f]) => f.displayName && f.displayName.toLowerCase().includes(filter))
+        : allFriends;
+    list.forEach(([uid, friend]) => {
+        const item = document.createElement('div');
+        item.className = 'header-friend-item';
+        item.innerHTML = buildLobbyFriendItemHTML(uid, friend, { inviteActions: true });
+        DOMElements.lobbyFriendsAllList.appendChild(item);
+    });
+    DOMElements.lobbyFriendsAllList.querySelectorAll('.lobby-friend-invite-btn').forEach(btn => {
+        btn.addEventListener('click', () => inviteFriendToRoom(btn.dataset.uid));
+    });
+    DOMElements.lobbyFriendsAllList.querySelectorAll('.lobby-friend-remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => removeFriend(btn.dataset.uid));
+    });
+}
+
+function renderLobbyFriendsInvites() {
+    if (!DOMElements.lobbyFriendsInvitesList) return;
+    DOMElements.lobbyFriendsInvitesList.innerHTML = '';
+    const friendInvites = Object.entries(friendsState.invites);
+    const roomInvites = Object.entries(friendsState.roomInvites);
+    const total = friendInvites.length + roomInvites.length;
+    if (DOMElements.lobbyFriendInviteBadge) {
+        if (total > 0) {
+            DOMElements.lobbyFriendInviteBadge.textContent = total > 99 ? '99+' : String(total);
+            DOMElements.lobbyFriendInviteBadge.classList.remove('hidden');
+        } else {
+            DOMElements.lobbyFriendInviteBadge.classList.add('hidden');
+        }
+    }
+    if (DOMElements.lobbyFriendsInvitesEmpty) {
+        DOMElements.lobbyFriendsInvitesEmpty.classList.toggle('hidden', total > 0);
+    }
+    if (total === 0) return;
+    friendInvites.forEach(([inviteId, invite]) => {
+        const item = document.createElement('div');
+        item.className = 'header-friend-item';
+        item.innerHTML = `
+            <img src="${invite.photoURL || DEFAULT_AVATAR}" alt="">
+            <div class="header-friend-info">
+                <span class="header-friend-name">${invite.displayName || 'Người chơi'}</span>
+                <span class="header-friend-bingo">Muốn kết bạn</span>
+            </div>
+            <div class="header-friend-actions">
+                <button class="mini-btn lobby-friend-accept-btn" data-id="${inviteId}">Chấp nhận</button>
+                <button class="mini-btn is-danger lobby-friend-reject-btn" data-id="${inviteId}">Từ chối</button>
+            </div>
+        `;
+        DOMElements.lobbyFriendsInvitesList.appendChild(item);
+    });
+    roomInvites.forEach(([inviteId, invite]) => {
+        const item = document.createElement('div');
+        item.className = 'header-friend-item';
+        item.innerHTML = `
+            <img src="${invite.photoURL || DEFAULT_AVATAR}" alt="">
+            <div class="header-friend-info">
+                <span class="header-friend-name">${invite.displayName || 'Người chơi'}</span>
+                <span class="header-friend-bingo">Mời vào #${invite.roomCode}</span>
+            </div>
+            <div class="header-friend-actions">
+                <button class="mini-btn lobby-room-accept-btn" data-id="${inviteId}">Vào</button>
+                <button class="mini-btn is-danger lobby-room-reject-btn" data-id="${inviteId}">X</button>
+            </div>
+        `;
+        DOMElements.lobbyFriendsInvitesList.appendChild(item);
+    });
+    DOMElements.lobbyFriendsInvitesList.querySelectorAll('.lobby-friend-accept-btn').forEach(btn => {
+        btn.addEventListener('click', () => acceptFriendInvite(btn.dataset.id));
+    });
+    DOMElements.lobbyFriendsInvitesList.querySelectorAll('.lobby-friend-reject-btn').forEach(btn => {
+        btn.addEventListener('click', () => rejectFriendInvite(btn.dataset.id));
+    });
+    DOMElements.lobbyFriendsInvitesList.querySelectorAll('.lobby-room-accept-btn').forEach(btn => {
+        btn.addEventListener('click', () => acceptRoomInvite(btn.dataset.id));
+    });
+    DOMElements.lobbyFriendsInvitesList.querySelectorAll('.lobby-room-reject-btn').forEach(btn => {
+        btn.addEventListener('click', () => rejectRoomInvite(btn.dataset.id));
+    });
+}
+
+function updateLobbyFriendBadges() {
+    const friends = Object.entries(friendsState.friends || {});
+    const onlineCount = friends.filter(([uid]) => friendsState.friendStatuses[uid] && friendsState.friendStatuses[uid].online).length;
+    if (DOMElements.lobbyFriendBadge) {
+        if (onlineCount > 0) {
+            DOMElements.lobbyFriendBadge.textContent = onlineCount > 99 ? '99+' : String(onlineCount);
+            DOMElements.lobbyFriendBadge.classList.remove('hidden');
+        } else {
+            DOMElements.lobbyFriendBadge.classList.add('hidden');
+        }
+    }
+    // Refresh invite badge + list
+    renderLobbyFriendsInvites();
 }
 
 function switchFriendsTab(tabName) {
@@ -1070,11 +1555,13 @@ function renderFriendsList() {
     DOMElements.friendSearchResults.querySelectorAll('.remove-friend-btn').forEach(btn => {
         btn.addEventListener('click', () => removeFriend(btn.dataset.uid));
     });
+    renderHeaderFriendsList();
 }
 
 function renderInvitesList() {
     if (!DOMElements.invitesList) return;
     DOMElements.invitesList.innerHTML = '';
+    renderHeaderInvites();
     const friendInvites = Object.entries(friendsState.invites);
     const roomInvites = Object.entries(friendsState.roomInvites);
     if (friendInvites.length === 0 && roomInvites.length === 0) {
@@ -1126,25 +1613,89 @@ function renderInvitesList() {
 
 async function searchUsersByName(query) {
     if (!query || query.trim().length < 2) return [];
-    const lower = query.trim().toLowerCase();
-    // Cách đơn giản: quét index users theo displayNameLowercase nếu có; nếu không, fallback scan toàn bộ (giới hạn).
-    // Ở đây dùng fallback scan với giới hạn 50 user mỗi lần.
-    const snap = await database.ref('users').orderByChild('displayNameLowercase').startAt(lower).endAt(lower + '\uf8ff').limitToFirst(50).once('value');
-    const data = snap.val() || {};
-    return Object.entries(data).map(([uid, val]) => ({ uid, ...val })).filter(u => u.uid !== gameState.playerId);
+    const trimmed = query.trim();
+    const lower = trimmed.toLowerCase();
+    // Tìm theo displayNameLowercase hoặc bingoIdLowercase
+    const [byName, byId] = await Promise.all([
+        database.ref('users').orderByChild('displayNameLowercase').startAt(lower).endAt(lower + '\uf8ff').limitToFirst(50).once('value'),
+        trimmed.startsWith('@')
+            ? database.ref('users').orderByChild('bingoIdLowercase').startAt(lower).endAt(lower + '\uf8ff').limitToFirst(20).once('value')
+            : Promise.resolve({ val: () => null }),
+    ]);
+    const merged = {};
+    const fill = (snap) => {
+        const v = snap && snap.val ? snap.val() : snap;
+        if (v) Object.assign(merged, v);
+    };
+    fill(byName);
+    fill(byId);
+    return Object.entries(merged)
+        .filter(([uid, val]) => uid !== gameState.playerId && val)
+        .map(([uid, val]) => ({ uid, ...val }));
 }
 
 async function sendFriendInvite(toUid) {
     if (!gameState.user || !gameState.playerId || !toUid) return;
     if (toUid === gameState.playerId) return;
     const ref = database.ref(`users/${toUid}/friendInvites`).push();
-    await ref.set({
+    const invite = {
         fromUid: gameState.playerId,
         displayName: gameState.user.displayName,
-        photoURL: gameState.user.photoURL || null,
         at: firebase.database.ServerValue.TIMESTAMP,
-    });
+    };
+    if (gameState.user.photoURL) invite.photoURL = gameState.user.photoURL;
+    await ref.set(invite);
+    // Lưu cache local để hiển thị "Đã gửi" trong các danh sách
+    friendsState.sentInvites[toUid] = {
+        toUid,
+        at: Date.now(),
+    };
+    // Lắng nghe phản hồi: nếu bên kia xoá (reject) hoặc chấp nhận, cập nhật cache
+    watchSentFriendInviteStatus(toUid);
     alert('Đã gửi lời mời kết bạn.');
+    // Re-render các danh sách đang hiển thị
+    renderPlayerList(currentPlayersCache);
+    renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
+    renderFriendsList();
+}
+
+function watchSentFriendInviteStatus(toUid) {
+    if (!toUid) return;
+    if (!friendsState.sentInviteRefs) friendsState.sentInviteRefs = {};
+    if (friendsState.sentInviteRefs[toUid]) return; // đã lắng nghe
+    friendsState.sentInviteRefs[toUid] = true;
+    // Lắng nghe child_removed từ phía người nhận; khi lời mời của mình bị xoá → xoá cache
+    const myUid = gameState.playerId;
+    const invitesRef = database.ref(`users/${toUid}/friendInvites`);
+    const handler = (snap) => {
+        const val = snap.val();
+        if (val && val.fromUid === myUid) {
+            // vẫn còn → reset cache
+            friendsState.sentInvites[toUid] = {
+                toUid,
+                at: toMillis(val.at) || Date.now(),
+            };
+        } else if (!val) {
+            // lời mời của mình đã bị xoá (reject) hoặc được accept (đã chuyển thành friend)
+            delete friendsState.sentInvites[toUid];
+            // Nếu trở thành friend thì listener friends sẽ tự cập nhật; nếu reject thì chỉ xoá badge
+        }
+        renderPlayerList(currentPlayersCache);
+        renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
+        renderFriendsList();
+    };
+    // Dùng child_added để set cache ban đầu; child_removed để xoá khi reject
+    invitesRef.on('child_added', handler);
+    invitesRef.on('child_removed', handler);
+}
+
+function cleanFriendEntry(displayName, photoURL, includeSince) {
+    const entry = {
+        displayName: displayName || 'Người chơi',
+    };
+    if (photoURL) entry.photoURL = photoURL;
+    if (includeSince) entry.since = firebase.database.ServerValue.TIMESTAMP;
+    return entry;
 }
 
 async function acceptFriendInvite(inviteId) {
@@ -1154,21 +1705,22 @@ async function acceptFriendInvite(inviteId) {
     if (!myUid) return;
     const fromUid = invite.fromUid;
     try {
-        await database.ref(`users/${myUid}/friends/${fromUid}`).set({
-            displayName: invite.displayName,
-            photoURL: invite.photoURL,
-            since: firebase.database.ServerValue.TIMESTAMP,
-        });
-        await database.ref(`users/${fromUid}/friends/${myUid}`).set({
-            displayName: gameState.user.displayName,
-            photoURL: gameState.user.photoURL,
-            since: firebase.database.ServerValue.TIMESTAMP,
-        });
+        await database.ref(`users/${myUid}/friends/${fromUid}`).set(
+            cleanFriendEntry(invite.displayName, invite.photoURL, true)
+        );
+        await database.ref(`users/${fromUid}/friends/${myUid}`).set(
+            cleanFriendEntry(gameState.user && gameState.user.displayName, gameState.user && gameState.user.photoURL, true)
+        );
         await database.ref(`users/${myUid}/friendInvites/${inviteId}`).remove();
         delete friendsState.invites[inviteId];
+        // Phía mình: nếu từng gửi lời mời cho fromUid → xoá cache (nếu có)
+        delete friendsState.sentInvites[fromUid];
         renderInvitesList();
         renderFriendsList();
         updateInviteBadges();
+        // Re-render trong phòng nếu đang ở phòng
+        renderPlayerList(currentPlayersCache);
+        renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
     } catch (e) {
         console.error('Failed to accept friend invite:', e);
     }
@@ -1194,6 +1746,8 @@ async function removeFriend(friendUid) {
         await database.ref(`users/${friendUid}/friends/${myUid}`).remove();
         delete friendsState.friends[friendUid];
         renderFriendsList();
+        renderPlayerList(currentPlayersCache);
+        renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
     } catch (e) {
         console.error('Failed to remove friend:', e);
     }
@@ -1205,13 +1759,14 @@ async function inviteFriendToRoom(friendUid) {
         return;
     }
     try {
-        await database.ref(`users/${friendUid}/roomInvites`).push({
+        const invite = {
             fromUid: gameState.playerId,
             displayName: gameState.user.displayName,
-            photoURL: gameState.user.photoURL,
             roomCode: gameState.roomCode,
             at: firebase.database.ServerValue.TIMESTAMP,
-        });
+        };
+        if (gameState.user.photoURL) invite.photoURL = gameState.user.photoURL;
+        await database.ref(`users/${friendUid}/roomInvites`).push(invite);
         alert('Đã gửi lời mời vào phòng.');
     } catch (e) {
         console.error('Failed to invite:', e);
@@ -1244,6 +1799,26 @@ async function rejectRoomInvite(inviteId) {
     }
 }
 
+async function ensureBingoId() {
+    const myUid = gameState.playerId;
+    if (!myUid || !gameState.user) return;
+    const snap = await database.ref(`users/${myUid}/bingoId`).once('value');
+    if (!snap.exists()) {
+        const newId = await ensureUniqueBingoId(gameState.user.displayName || 'user');
+        await database.ref(`users/${myUid}`).update({
+            bingoId: newId,
+            bingoIdLowercase: newId.toLowerCase(),
+        });
+        gameState.user.bingoId = newId;
+    } else {
+        gameState.user.bingoId = snap.val();
+    }
+    if (DOMElements.profileBingoId) {
+        DOMElements.profileBingoId.textContent = gameState.user.bingoId || '';
+    }
+    updateLobbyUserBar();
+}
+
 function setupUserProfile() {
     const myUid = gameState.playerId;
     if (!myUid) return;
@@ -1254,6 +1829,7 @@ function setupUserProfile() {
         photoURL: gameState.user.photoURL || null,
         lastSeen: firebase.database.ServerValue.TIMESTAMP,
     }).catch(() => {});
+    ensureBingoId();
     profileRef.child('lastSeen').onDisconnect().set(Date.now());
     // Presence: ghi online = true; off thì set false
     const statusRef = database.ref(`users/${myUid}/status`);
@@ -1262,8 +1838,16 @@ function setupUserProfile() {
 
     // Lắng nghe friends, friendInvites, roomInvites
     database.ref(`users/${myUid}/friends`).on('value', (snap) => {
-        friendsState.friends = snap.val() || {};
+        const newFriends = snap.val() || {};
+        const removedIds = Object.keys(friendsState.friends).filter(id => !newFriends[id]);
+        friendsState.friends = newFriends;
+        // Nếu có bạn bị xoá → cũng clear sentInvites cho uid đó (vì có thể mình từng gửi)
+        removedIds.forEach(id => { delete friendsState.sentInvites[id]; });
         renderFriendsList();
+        renderHeaderFriendsList();
+        // Cập nhật badge trong phòng
+        renderPlayerList(currentPlayersCache);
+        renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
         // Đồng thời lắng nghe status của từng friend
         Object.keys(friendsState.friends).forEach(fid => {
             if (!friendsState.friendStatuses[fid] || !friendsState.friendStatuses[fid].__listening) {
@@ -1274,6 +1858,7 @@ function setupUserProfile() {
                     friendsState.friendStatuses[fid] = v || {};
                     friendsState.friendStatuses[fid].__listening = true;
                     renderFriendsList();
+                    renderHeaderFriendsList();
                 });
             }
         });
@@ -1286,16 +1871,31 @@ function setupUserProfile() {
         updateInviteBadges();
         if (!friendsState.lastNotifiedInviteIds.has(id)) {
             friendsState.lastNotifiedInviteIds.add(id);
-            alert(`${val.displayName || 'Người chơi'} muốn kết bạn với bạn!`);
+            showToast({
+                title: `${val.displayName || 'Người chơi'} muốn kết bạn`,
+                message: 'Bấm Chấp nhận để đồng ý.',
+                photoURL: val.photoURL,
+                type: 'friend',
+                duration: 8000,
+                actions: [
+                    { label: 'Từ chối', variant: 'reject', onClick: () => rejectFriendInvite(id) },
+                    { label: 'Chấp nhận', variant: 'accept', onClick: () => acceptFriendInvite(id) },
+                ],
+            });
         }
         if (DOMElements.invitesPanel && !DOMElements.invitesPanel.classList.contains('hidden')) {
             renderInvitesList();
         }
+        // Realtime: cập nhật badge trong phòng
+        renderPlayerList(currentPlayersCache);
+        renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
     });
     database.ref(`users/${myUid}/friendInvites`).on('child_removed', (snap) => {
         delete friendsState.invites[snap.key];
         updateInviteBadges();
         renderInvitesList();
+        renderPlayerList(currentPlayersCache);
+        renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
     });
     database.ref(`users/${myUid}/roomInvites`).on('child_added', (snap) => {
         const id = snap.key;
@@ -1305,7 +1905,17 @@ function setupUserProfile() {
         updateInviteBadges();
         if (!friendsState.lastNotifiedRoomInviteIds.has(id)) {
             friendsState.lastNotifiedRoomInviteIds.add(id);
-            alert(`${val.displayName || 'Người chơi'} mời bạn vào phòng #${val.roomCode}!`);
+            showToast({
+                title: `${val.displayName || 'Người chơi'} mời vào phòng`,
+                message: `Phòng #${val.roomCode}`,
+                photoURL: val.photoURL,
+                type: 'room',
+                duration: 8000,
+                actions: [
+                    { label: 'Từ chối', variant: 'reject', onClick: () => rejectRoomInvite(id) },
+                    { label: 'Vào phòng', variant: 'accept', onClick: () => acceptRoomInvite(id) },
+                ],
+            });
         }
         if (DOMElements.invitesPanel && !DOMElements.invitesPanel.classList.contains('hidden')) {
             renderInvitesList();
@@ -1327,10 +1937,14 @@ function teardownUserProfile() {
     Object.keys(friendsState.friendStatuses).forEach(fid => {
         database.ref(`users/${fid}/status`).off();
     });
+    Object.keys(friendsState.sentInviteRefs || {}).forEach(toUid => {
+        try { database.ref(`users/${toUid}/friendInvites`).off(); } catch (e) {}
+    });
     friendsState.friends = {};
     friendsState.invites = {};
     friendsState.roomInvites = {};
     friendsState.friendStatuses = {};
+    friendsState.sentInvites = {};
     friendsState.lastNotifiedInviteIds = new Set();
     friendsState.lastNotifiedRoomInviteIds = new Set();
     updateInviteBadges();
@@ -1776,11 +2390,59 @@ async function rejoinRoom(roomCode) {
     }
 }
 
+let currentPlayersCache = {};
+let currentSpectatorsCache = {};
+
+function getFriendRelation(targetUid) {
+    if (!targetUid || !gameState.playerId || targetUid === gameState.playerId) return 'self';
+    if (friendsState.friends[targetUid]) return 'friend';
+    if (friendsState.invites[targetUid]) return 'received';
+    if (friendsState.sentInvites[targetUid]) return 'sent';
+    return 'none';
+}
+
+function setupInRoomFriendDelegation() {
+    if (setupInRoomFriendDelegation.__done) return;
+    setupInRoomFriendDelegation.__done = true;
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('.add-friend-from-list');
+        if (!btn) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const uid = btn.dataset.uid;
+        if (!uid) return;
+        if (btn.__busy) return;
+        btn.__busy = true;
+        btn.disabled = true;
+        sendFriendInvite(uid).finally(() => {
+            btn.__busy = false;
+            // ensureBingoId / cache sẽ tự refresh badges sau khi gửi
+            renderPlayerList(currentPlayersCache);
+            renderLobbyPlayerList(currentPlayersCache, currentSpectatorsCache);
+        });
+    });
+}
+
+function buildFriendStatusBadgeHTML(targetUid) {
+    const relation = getFriendRelation(targetUid);
+    if (relation === 'self') return '';
+    if (relation === 'friend') {
+        return `<button class="friend-badge is-friend" disabled title="Đã là bạn bè">✓ Bạn</button>`;
+    }
+    if (relation === 'sent') {
+        return `<button class="friend-badge is-sent" disabled title="Đã gửi lời mời kết bạn">⏳ Đã gửi</button>`;
+    }
+    if (relation === 'received') {
+        return `<button class="friend-badge is-received add-friend-from-list" data-uid="${targetUid}" title="Có lời mời kết bạn - Mở Bạn Bè để đồng ý">📨 Lời mời</button>`;
+    }
+    return `<button class="friend-badge add-friend-from-list" data-uid="${targetUid}" title="Kết bạn">➕ Kết bạn</button>`;
+}
+
 function renderPlayerList(players) {
     DOMElements.playerList.innerHTML = '';
     if (!players) return;
 
-    Object.values(players).forEach(player => {
+    Object.entries(players).forEach(([uid, player]) => {
         const playerEl = document.createElement('div');
         playerEl.className = 'player-item';
         if (player.role === 'host') {
@@ -1812,10 +2474,12 @@ function renderPlayerList(players) {
             <img src="${avatar}" alt="Avatar" class="header-avatar">
             <span class="player-name">${displayName}</span>
             ${badges}
+            ${buildFriendStatusBadgeHTML(uid)}
         `;
 
         DOMElements.playerList.appendChild(playerEl);
     });
+    setupInRoomFriendDelegation();
 }
 
 function renderLobbyPlayerList(players, spectators) {
@@ -1823,8 +2487,8 @@ function renderLobbyPlayerList(players, spectators) {
     DOMElements.lobbyPlayerList.innerHTML = '';
     if (!players) return;
 
-    const playersList = Object.values(players).filter(Boolean);
-    playersList.forEach(player => {
+    const playersList = Object.entries(players).filter(([uid, val]) => val);
+    playersList.forEach(([uid, player]) => {
         const playerEl = document.createElement('div');
         playerEl.className = 'player-item';
         if (player.role === 'host') {
@@ -1842,6 +2506,7 @@ function renderLobbyPlayerList(players, spectators) {
             <span class="player-name">${displayName}</span>
             ${player.role === 'host' ? '<span class="host-icon" title="Chủ phòng">👑</span>' : ''}
             ${player.role === 'host' ? '' : `<span class="ready-indicator ${player.isReady ? 'is-active' : ''}" title="${player.isReady ? 'Đã sẵn sàng' : 'Chưa sẵn sàng'}">✓</span>`}
+            ${buildFriendStatusBadgeHTML(uid)}
         `;
         DOMElements.lobbyPlayerList.appendChild(playerEl);
     });
@@ -1861,9 +2526,10 @@ function renderLobbyPlayerList(players, spectators) {
         DOMElements.lobbyPlayerList.appendChild(el);
     });
 
-    if (playersList.length === 1 && playersList[0].role === 'host') {
+    if (playersList.length === 1 && playersList[0][1].role === 'host') {
         DOMElements.waitingForPlayerText.textContent = 'Chờ người chơi khác vào phòng...';
     }
+    setupInRoomFriendDelegation();
 }
 
 async function toggleLobbyReady() {
@@ -2228,6 +2894,7 @@ function listenForGameEvents(roomCode) {
             DOMElements.gameRoomInfo.classList.remove('hidden');
             DOMElements.gameRoomCode.textContent = gameState.roomCode;
             DOMElements.playerListContainer.classList.remove('hidden');
+            currentPlayersCache = players;
             renderPlayerList(players);
             // Refresh danh sách người đang nói (tên/avatar) khi players thay đổi
             if (DOMElements.voiceParticipants && gameState.roomCode) {
@@ -2246,7 +2913,10 @@ function listenForGameEvents(roomCode) {
 
         // Update Lobby UI
         if (DOMElements.mainModal.classList.contains('visible') && (roomData.status === 'waiting' || roomData.status === 'playing')) {
+            currentPlayersCache = players;
+            currentSpectatorsCache = roomData.spectators;
             renderLobbyPlayerList(players, roomData.spectators);
+            setupInRoomFriendDelegation();
             const memberEntries = Object.values(players).filter(p => p && p.role !== 'host');
             const memberTotal = memberEntries.length;
             const memberReady = memberEntries.filter(p => p.isReady).length;
@@ -2804,6 +3474,18 @@ DOMElements.lobbyLeaveRoomBtn.addEventListener('click', handleLeaveRoom);
 DOMElements.startGameBtn.addEventListener('click', handleStartGameClick);
 DOMElements.lobbyReadyBtn.addEventListener('click', toggleLobbyReady);
 DOMElements.closeProfileModalBtn.addEventListener('click', closeProfileModal);
+if (DOMElements.copyBingoIdBtn) {
+    DOMElements.copyBingoIdBtn.addEventListener('click', () => {
+        const id = DOMElements.profileBingoId ? DOMElements.profileBingoId.textContent : '';
+        if (!id) return;
+        navigator.clipboard.writeText(id).then(() => {
+            DOMElements.copyBingoIdBtn.textContent = '✅ Đã sao chép';
+            setTimeout(() => { DOMElements.copyBingoIdBtn.textContent = '📋 Sao chép'; }, 1500);
+        }).catch(() => {
+            prompt('Sao chép ID:', id);
+        });
+    });
+}
 DOMElements.lockBoardBtn.addEventListener('click', validateAndLockBoard);
 
 if (DOMElements.chatToggleBtn) {
@@ -2895,6 +3577,32 @@ DOMElements.roomCodeDisplay.addEventListener('click', () => {
 });
 
 // --- 8. Initial Setup & Auth Handlers ---
+function stripVietnamese(str) {
+    return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase();
+}
+
+function generateBingoId(displayName) {
+    const base = stripVietnamese(displayName) || 'user';
+    const sanitized = base.replace(/^@+/, '').substring(0, 16);
+    const suffix = Math.floor(1000 + Math.random() * 9000); // 4 chữ số
+    return '@' + sanitized + suffix;
+}
+
+async function ensureUniqueBingoId(base, attempts = 0) {
+    if (attempts > 8) return generateBingoId(base) + Math.floor(Math.random() * 100);
+    const candidate = generateBingoId(base);
+    const snap = await database.ref('users').orderByChild('bingoId').equalTo(candidate).once('value');
+    if (snap.exists()) {
+        return ensureUniqueBingoId(base, attempts + 1);
+    }
+    return candidate;
+}
+
 async function handleAuthSubmit(event) {
     event.preventDefault();
     const email = DOMElements.authEmailInput.value.trim();
@@ -2908,8 +3616,18 @@ async function handleAuthSubmit(event) {
                 return;
             }
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const bingoId = await ensureUniqueBingoId(username);
             await userCredential.user.updateProfile({ displayName: username });
-            displayAuthSuccess("Đăng ký thành công!");
+            // Lưu bingoId ngay vào Firebase user profile
+            await database.ref(`users/${userCredential.user.uid}`).update({
+                bingoId,
+                bingoIdLowercase: bingoId.toLowerCase(),
+                displayName: username,
+                displayNameLowercase: username.toLowerCase(),
+                photoURL: userCredential.user.photoURL || null,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+            });
+            displayAuthSuccess(`Đăng ký thành công! ID của bạn: ${bingoId}`);
         } else {
             await auth.signInWithEmailAndPassword(email, password);
             displayAuthSuccess("Đăng nhập thành công!");
@@ -2944,6 +3662,128 @@ if (DOMElements.openFriendsBtn) {
 if (DOMElements.closeFriendsModalBtn) {
     DOMElements.closeFriendsModalBtn.addEventListener('click', closeFriendsModal);
 }
+if (DOMElements.lobbyOpenFriendsBtn) {
+    DOMElements.lobbyOpenFriendsBtn.addEventListener('click', () => {
+        openLobbyFriendsModal();
+    });
+}
+const lobbyRoomFriendsBtn = document.getElementById('lobby-room-friends-btn');
+if (lobbyRoomFriendsBtn) {
+    lobbyRoomFriendsBtn.addEventListener('click', () => {
+        openLobbyFriendsModal();
+    });
+}
+if (DOMElements.closeLobbyFriendsModalBtn) {
+    DOMElements.closeLobbyFriendsModalBtn.addEventListener('click', closeLobbyFriendsModal);
+}
+if (DOMElements.lobbyFriendsTabs) {
+    DOMElements.lobbyFriendsTabs.forEach(tab => {
+        tab.addEventListener('click', () => switchLobbyFriendsTab(tab.dataset.tab));
+    });
+}
+if (DOMElements.lobbyFriendsSearch) {
+    DOMElements.lobbyFriendsSearch.addEventListener('input', () => renderLobbyFriendsOnline());
+}
+if (DOMElements.lobbyFriendsAllSearch) {
+    DOMElements.lobbyFriendsAllSearch.addEventListener('input', () => renderLobbyFriendsAll());
+}
+if (DOMElements.lobbyAddFriendBtn) {
+    DOMElements.lobbyAddFriendBtn.addEventListener('click', async () => {
+        const q = DOMElements.lobbyAddFriendInput ? DOMElements.lobbyAddFriendInput.value.trim() : '';
+        if (!q) return;
+        const results = await searchUsersByName(q);
+        DOMElements.lobbyAddFriendResults.innerHTML = '';
+        DOMElements.lobbyAddFriendHint.textContent = '';
+        if (results.length === 0) {
+            DOMElements.lobbyAddFriendHint.textContent = 'Không tìm thấy người chơi nào.';
+            return;
+        }
+        const exact = results.find(r => (r.displayName || '').toLowerCase() === q.toLowerCase())
+            || (q.startsWith('@') && results.find(r => (r.bingoId || '').toLowerCase() === q.toLowerCase()))
+            || results[0];
+        results.forEach(user => {
+            const item = document.createElement('div');
+            item.className = 'header-friend-item';
+            const isExact = user.uid === (exact && exact.uid);
+            item.innerHTML = `
+                <img src="${user.photoURL || DEFAULT_AVATAR}" alt="">
+                <div class="header-friend-info">
+                    <span class="header-friend-name">${user.displayName || 'Người chơi'} ${isExact ? '✓' : ''}</span>
+                    <span class="header-friend-bingo">${user.bingoId || ''}</span>
+                </div>
+                <div class="header-friend-actions">
+                    <button class="mini-btn lobby-add-friend-send-btn" data-uid="${user.uid}">➕ Kết bạn</button>
+                </div>
+            `;
+            DOMElements.lobbyAddFriendResults.appendChild(item);
+        });
+        DOMElements.lobbyAddFriendResults.querySelectorAll('.lobby-add-friend-send-btn').forEach(btn => {
+            btn.addEventListener('click', () => sendFriendInvite(btn.dataset.uid));
+        });
+    });
+}
+if (DOMElements.headerFriendsBtn) {
+    DOMElements.headerFriendsBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleHeaderFriendsPopup();
+    });
+}
+if (DOMElements.headerFriendsOpenModal) {
+    DOMElements.headerFriendsOpenModal.addEventListener('click', () => {
+        toggleHeaderFriendsPopup(false);
+        openFriendsModal();
+    });
+}
+if (DOMElements.headerFriendsTabs) {
+    DOMElements.headerFriendsTabs.forEach(tab => {
+        tab.addEventListener('click', () => switchHeaderFriendsTab(tab.dataset.tab));
+    });
+}
+if (DOMElements.headerFriendsSearch) {
+    DOMElements.headerFriendsSearch.addEventListener('input', () => renderHeaderFriendsList());
+}
+if (DOMElements.headerAddFriendBtn) {
+    DOMElements.headerAddFriendBtn.addEventListener('click', async () => {
+        const q = DOMElements.headerAddFriendInput ? DOMElements.headerAddFriendInput.value.trim() : '';
+        if (!q) return;
+        const results = await searchUsersByName(q);
+        DOMElements.headerAddFriendResults.innerHTML = '';
+        DOMElements.headerAddFriendHint.textContent = '';
+        if (results.length === 0) {
+            DOMElements.headerAddFriendHint.textContent = 'Không tìm thấy người chơi nào.';
+            return;
+        }
+        const exact = results.find(r => (r.displayName || '').toLowerCase() === q.toLowerCase())
+            || (q.startsWith('@') && results.find(r => (r.bingoId || '').toLowerCase() === q.toLowerCase()))
+            || results[0];
+        results.forEach(user => {
+            const item = document.createElement('div');
+            item.className = 'header-friend-item';
+            const isExact = user.uid === (exact && exact.uid);
+            item.innerHTML = `
+                <img src="${user.photoURL || DEFAULT_AVATAR}" alt="">
+                <div class="header-friend-info">
+                    <span class="header-friend-name">${user.displayName || 'Người chơi'} ${isExact ? '✓' : ''}</span>
+                    <span class="header-friend-bingo">${user.bingoId || ''}</span>
+                </div>
+                <div class="header-friend-actions">
+                    <button class="mini-btn header-add-friend-send-btn" data-uid="${user.uid}">➕ Kết bạn</button>
+                </div>
+            `;
+            DOMElements.headerAddFriendResults.appendChild(item);
+        });
+        DOMElements.headerAddFriendResults.querySelectorAll('.header-add-friend-send-btn').forEach(btn => {
+            btn.addEventListener('click', () => sendFriendInvite(btn.dataset.uid));
+        });
+    });
+}
+document.addEventListener('click', (event) => {
+    if (!DOMElements.headerFriendsPopup || DOMElements.headerFriendsPopup.classList.contains('hidden')) return;
+    const target = event.target;
+    if (DOMElements.headerFriendsPopup.contains(target)) return;
+    if (DOMElements.headerFriendsBtn && DOMElements.headerFriendsBtn.contains(target)) return;
+    toggleHeaderFriendsPopup(false);
+});
 if (DOMElements.friendsTabs) {
     DOMElements.friendsTabs.forEach(tab => {
         tab.addEventListener('click', () => switchFriendsTab(tab.dataset.tab));
@@ -3158,6 +3998,7 @@ async function handleAvatarUpload(event) {
         gameState.user.photoURL = downloadURL;
         DOMElements.userAvatar.src = downloadURL;
         DOMElements.profileAvatarPreview.src = downloadURL;
+        updateLobbyUserBar();
 
         statusEl.textContent = 'Cập nhật avatar thành công!';
         setTimeout(() => statusEl.classList.add('hidden'), 3000);
@@ -3181,6 +4022,8 @@ auth.onAuthStateChanged(user => {
         DOMElements.userProfileContainer.classList.remove('hidden');
         DOMElements.userAvatar.src = gameState.user.photoURL || DEFAULT_AVATAR;
         DOMElements.userDisplayName.textContent = `Chào, ${gameState.user.displayName}`;
+        updateLobbyUserBar();
+        if (DOMElements.headerFriendsContainer) DOMElements.headerFriendsContainer.classList.remove('hidden');
 
         setupUserProfile();
 
@@ -3206,6 +4049,11 @@ auth.onAuthStateChanged(user => {
         clearTimeout(inactivityTimer);
 
         DOMElements.userProfileContainer.classList.add('hidden');
+        if (DOMElements.headerFriendsContainer) DOMElements.headerFriendsContainer.classList.add('hidden');
+        if (DOMElements.headerFriendsPopup) {
+            DOMElements.headerFriendsPopup.classList.add('hidden');
+            DOMElements.headerFriendsBtn && DOMElements.headerFriendsBtn.classList.remove('is-active');
+        }
         DOMElements.authView.classList.remove('hidden');
         DOMElements.lobbyView.classList.add('hidden');
         DOMElements.mainModal.classList.add('visible');

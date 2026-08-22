@@ -44,29 +44,52 @@
             <!-- Lobby View (was Multiplayer View) -->
             <div id="lobby-view" class="hidden">
                 <h2 class="modal-title">Chơi Cùng Bạn Bè</h2>
-                <div id="room-actions">
-                    <div class="room-setting-container">
-                        <label for="max-players-select">Số người chơi:</label>
-                        <select id="max-players-select" class="cyber-select">
-                            <option value="2" selected>2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                        </select>
+
+                <!-- User Profile Bar -->
+                <div id="lobby-user-bar" class="lobby-user-bar">
+                    <img id="lobby-user-avatar" src="" alt="Avatar" class="lobby-user-avatar">
+                    <div class="lobby-user-info">
+                        <span id="lobby-user-name" class="lobby-user-name"></span>
+                        <code id="lobby-user-bingo-id" class="lobby-user-bingo-id"></code>
                     </div>
-                    <button id="create-room-btn" class="cyber-button ripple">
-                        <span class="button-text">Tạo Phòng Mới</span>
-                    </button>
-                    <button id="pre-room-logout-btn" class="cyber-button ripple logout-btn">🚪 Đăng Xuất</button>
-                    <div class="join-room-section">
-                        <input type="text" id="room-code-input" placeholder="NHẬP MÃ PHÒNG" maxlength="5" inputmode="numeric" pattern="[0-9]*">
-                        <div class="join-room-actions">
-                            <button id="join-room-btn" class="cyber-button ripple">
-                                <span class="button-text">Vào Phòng</span>
+                    <button id="lobby-logout-btn" class="mini-btn logout-mini-btn" title="Đăng Xuất">🚪 Đăng Xuất</button>
+                </div>
+
+                <div id="room-actions">
+                    <div class="lobby-actions-grid">
+                        <!-- Tạo phòng -->
+                        <div class="lobby-action-card is-primary">
+                            <h3 class="lobby-action-title">➕ Tạo Phòng Mới</h3>
+                            <p class="lobby-action-hint">Mời bạn bè tham gia.</p>
+                            <div class="room-setting-container">
+                                <label for="max-players-select">Số người chơi:</label>
+                                <select id="max-players-select" class="cyber-select">
+                                    <option value="2" selected>2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                            <button id="create-room-btn" class="cyber-button ripple">
+                                <span class="button-text">Tạo Phòng</span>
                             </button>
-                            <button id="spectate-room-btn" class="cyber-button ripple">
-                                <span class="button-text">👁️ Xem</span>
-                            </button>
+                        </div>
+
+                        <!-- Vào phòng -->
+                        <div class="lobby-action-card">
+                            <h3 class="lobby-action-title">🚪 Vào Phòng</h3>
+                            <p class="lobby-action-hint">Nhập mã 5 số từ bạn bè.</p>
+                            <div class="join-room-section">
+                                <input type="text" id="room-code-input" placeholder="NHẬP MÃ PHÒNG" maxlength="5" inputmode="numeric" pattern="[0-9]*">
+                                <div class="join-room-actions">
+                                    <button id="join-room-btn" class="cyber-button ripple">
+                                        <span class="button-text">Vào Phòng</span>
+                                    </button>
+                                    <button id="spectate-room-btn" class="cyber-button ripple">
+                                        <span class="button-text">👁️ Xem</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -87,9 +110,11 @@
                         <span class="button-text">➕ Vào chơi</span>
                         <span class="button-icon"></span>
                     </button>
-                    <div class="lobby-actions-row">
-                        <button id="lobby-leave-room-btn" class="cyber-button ripple">Rời Phòng</button>
-                        <button id="lobby-logout-btn" class="cyber-button ripple logout-btn">🚪 Đăng Xuất</button>
+                    <div class="lobby-room-actions">
+                        <button id="lobby-room-friends-btn" class="cyber-button ripple lobby-room-friends-btn">
+                            👥 Mời bạn bè
+                        </button>
+                        <button id="lobby-leave-room-btn" class="cyber-button ripple">🚪 Rời Phòng</button>
                     </div>
                 </div>
             </div>
@@ -120,11 +145,55 @@
         </div>
     </header>
 
+    <!-- Lobby Friends Popup (overlay) -->
+    <div id="lobby-friends-modal" class="modal-backdrop hidden">
+        <div class="modal-content glassmorphism lobby-friends-content">
+            <h2 class="modal-title">👥 Bạn Bè</h2>
+            <div class="header-friends-tabs">
+                <button class="header-friends-tab is-active" data-tab="online">Online</button>
+                <button class="header-friends-tab" data-tab="all">Tất cả</button>
+                <button class="header-friends-tab" data-tab="add">Thêm bạn</button>
+                <button class="header-friends-tab" data-tab="invites">Lời mời <span id="lobby-friend-invite-badge" class="invite-badge hidden">0</span></button>
+            </div>
+
+            <div id="lobby-friends-online-panel" class="header-friends-panel">
+                <input type="text" id="lobby-friends-search" placeholder="🔍 Tìm bạn online theo tên..." class="header-friends-search">
+                <div id="lobby-friends-online-list" class="header-friends-list custom-scrollbar"></div>
+                <div id="lobby-friends-online-empty" class="header-friends-empty hidden">Chưa có bạn bè nào online.</div>
+            </div>
+
+            <div id="lobby-friends-all-panel" class="header-friends-panel hidden">
+                <input type="text" id="lobby-friends-all-search" placeholder="🔍 Tìm trong danh sách..." class="header-friends-search">
+                <div id="lobby-friends-all-list" class="header-friends-list custom-scrollbar"></div>
+                <div id="lobby-friends-all-empty" class="header-friends-empty hidden">Bạn chưa có bạn bè nào. Vào tab "Thêm bạn".</div>
+            </div>
+
+            <div id="lobby-friends-add-panel" class="header-friends-panel hidden">
+                <input type="text" id="lobby-add-friend-input" placeholder="Tên hiển thị hoặc @bingoId..." class="header-friends-search">
+                <button id="lobby-add-friend-btn" class="cyber-button ripple">🔍 Tìm & Gửi lời mời</button>
+                <div id="lobby-add-friend-results" class="header-friends-list custom-scrollbar"></div>
+                <div id="lobby-add-friend-hint" class="header-friends-empty">Nhập đúng tên hiển thị hoặc ID Bingo (@ten1234).</div>
+            </div>
+
+            <div id="lobby-friends-invites-panel" class="header-friends-panel hidden">
+                <div id="lobby-friends-invites-list" class="header-friends-list custom-scrollbar"></div>
+                <div id="lobby-friends-invites-empty" class="header-friends-empty hidden">Không có lời mời nào.</div>
+            </div>
+
+            <button id="close-lobby-friends-modal-btn" class="cyber-button ripple">Đóng</button>
+        </div>
+    </div>
+
     <!-- Profile Modal -->
     <div id="profile-modal" class="modal-backdrop hidden">
         <div class="modal-content glassmorphism">
             <h2 class="modal-title">Hồ Sơ Của Bạn</h2>
             <div class="profile-details">
+                <div class="profile-bingo-id-row">
+                    <span class="profile-bingo-label">ID Bingo:</span>
+                    <code id="profile-bingo-id" class="profile-bingo-id"></code>
+                    <button id="copy-bingo-id-btn" class="mini-btn" type="button">📋 Sao chép</button>
+                </div>
                 <div class="avatar-upload-container">
                     <img id="profile-avatar-preview" src="" alt="Avatar Preview" class="profile-avatar">
                     <label for="avatar-upload-input" class="cyber-button ripple">
@@ -148,7 +217,7 @@
                 <button class="friends-tab" data-tab="invites">Lời mời <span id="friends-invite-tab-badge" class="invite-badge hidden">0</span></button>
             </div>
             <div id="friends-panel" class="friends-panel">
-                <input type="text" id="friend-search-input" placeholder="Tìm bạn theo tên hiển thị..." class="friends-search">
+                <input type="text" id="friend-search-input" placeholder="Tìm bạn theo tên hiển thị hoặc ID Bingo (@ten1234)..." class="friends-search">
                 <button id="friend-search-btn" class="cyber-button ripple">🔍 Tìm</button>
                 <div id="friend-search-results" class="friend-list custom-scrollbar"></div>
             </div>
@@ -175,7 +244,6 @@
                 </div>
                 <div class="room-info-actions">
                     <button id="leave-room-btn" class="cyber-button ripple small-btn">Rời Phòng</button>
-                    <button id="game-logout-btn" class="cyber-button ripple small-btn logout-btn">🚪 Đăng Xuất</button>
                 </div>
             </div>
             <div class="caller-display">
@@ -279,6 +347,9 @@
             </form>
         </aside>
     </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <!-- Victory Modal -->
     <div id="victory-modal" class="modal-backdrop hidden">
