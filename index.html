@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#08111f">
+    <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%2300f2fe'/><text x='50%25' y='54%25' font-family='Orbitron,Arial' font-size='34' font-weight='800' text-anchor='middle' fill='%23081123' dominant-baseline='middle'>B</text></svg>">
     <title>BINGO BƠ HOUSE GAME</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,7 +71,11 @@
                         <h3>Người chơi trong phòng</h3>
                         <div id="lobby-player-list" class="player-list custom-scrollbar"></div>
                     </div>
-                    <p id="waiting-for-player-text">Đang chờ người chơi...</p>
+                    <p id="waiting-for-player-text">Đang chờ người chơi sẵn sàng (0/0)</p>
+                    <button id="lobby-ready-btn" class="cyber-button ripple hidden">
+                        <span class="button-text">✅ Sẵn Sàng</span>
+                        <span class="button-icon"></span>
+                    </button>
                     <button id="start-game-btn" class="cyber-button ripple hidden">Bắt Đầu Trận Đấu</button>
                     <button id="lobby-leave-room-btn" class="cyber-button ripple">Rời Phòng</button>
                 </div>
@@ -193,7 +198,11 @@
             <h2 id="game-over-title" class="modal-title">🏆 BINGO! VICTORY! 🏆</h2>
             <p id="game-over-message" class="modal-message">Chúc mừng bạn đã hoàn thành 5 đường BINGO!</p>
             <button id="reset-game-btn" class="cyber-button ripple">
-                <span class="button-text">🔄 Chơi Lại</span>
+                <span class="button-text">🔄 Chơi Ván Mới</span>
+                <span class="button-icon"></span>
+            </button>
+            <button id="victory-leave-room-btn" class="cyber-button ripple">
+                <span class="button-text">🚪 Rời Phòng</span>
                 <span class="button-icon"></span>
             </button>
         </div>

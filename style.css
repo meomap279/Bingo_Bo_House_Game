@@ -313,6 +313,10 @@ select,
     font-size: 0.76rem;
 }
 
+#victory-leave-room-btn {
+    margin-top: 0.6rem;
+}
+
 .caller-display {
     display: grid;
     justify-items: center;
@@ -585,7 +589,8 @@ select,
     border-radius: inherit;
     background: linear-gradient(90deg, var(--theme-secondary), var(--theme-primary), var(--theme-accent));
     box-shadow: var(--glow-strength-light);
-    transition: width 0.45s ease;
+    transition: width 0.4s linear;
+    will-change: width;
 }
 
 .progress-bar {
@@ -676,6 +681,45 @@ select,
 .player-status.is-ready {
     background: var(--color-success-green);
     box-shadow: 0 0 12px var(--color-success-green);
+}
+
+.ready-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 900;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    transition: all 0.2s ease;
+}
+
+.ready-indicator.is-active {
+    color: var(--color-text-dark);
+    background: var(--color-success-green);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 14px var(--color-success-green), 0 0 26px color-mix(in srgb, var(--color-success-green) 60%, transparent);
+    animation: ready-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ready-pulse {
+    0%, 100% { box-shadow: 0 0 12px var(--color-success-green), 0 0 24px color-mix(in srgb, var(--color-success-green) 55%, transparent); transform: scale(1); }
+    50% { box-shadow: 0 0 20px var(--color-success-green), 0 0 38px color-mix(in srgb, var(--color-success-green) 75%, transparent); transform: scale(1.08); }
+}
+
+.player-item.is-ready {
+    border-color: color-mix(in srgb, var(--color-success-green) 60%, rgba(255, 255, 255, 0.1));
+}
+
+#lobby-ready-btn.is-ready-active {
+    background: linear-gradient(135deg, var(--color-success-green), #7df3b1);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-dark);
 }
 
 .header-avatar {
