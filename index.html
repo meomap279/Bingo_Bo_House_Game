@@ -57,11 +57,17 @@
                     <button id="create-room-btn" class="cyber-button ripple">
                         <span class="button-text">Tạo Phòng Mới</span>
                     </button>
+                    <button id="pre-room-logout-btn" class="cyber-button ripple logout-btn">🚪 Đăng Xuất</button>
                     <div class="join-room-section">
                         <input type="text" id="room-code-input" placeholder="NHẬP MÃ PHÒNG" maxlength="5" inputmode="numeric" pattern="[0-9]*">
-                        <button id="join-room-btn" class="cyber-button ripple">
-                            <span class="button-text">Vào Phòng</span>
-                        </button>
+                        <div class="join-room-actions">
+                            <button id="join-room-btn" class="cyber-button ripple">
+                                <span class="button-text">Vào Phòng</span>
+                            </button>
+                            <button id="spectate-room-btn" class="cyber-button ripple">
+                                <span class="button-text">👁️ Xem</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div id="room-info-display" class="hidden">
@@ -77,7 +83,14 @@
                         <span class="button-icon"></span>
                     </button>
                     <button id="start-game-btn" class="cyber-button ripple hidden">Bắt Đầu Trận Đấu</button>
-                    <button id="lobby-leave-room-btn" class="cyber-button ripple">Rời Phòng</button>
+                    <button id="spectator-join-play-btn" class="cyber-button ripple hidden">
+                        <span class="button-text">➕ Vào chơi</span>
+                        <span class="button-icon"></span>
+                    </button>
+                    <div class="lobby-actions-row">
+                        <button id="lobby-leave-room-btn" class="cyber-button ripple">Rời Phòng</button>
+                        <button id="lobby-logout-btn" class="cyber-button ripple logout-btn">🚪 Đăng Xuất</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -100,6 +113,7 @@
                 </div>
                 <div id="user-dropdown" class="glassmorphism hidden">
                     <a id="view-profile-link" class="dropdown-item">👤 Hồ Sơ</a>
+                    <button id="open-friends-btn" class="dropdown-item">👥 Bạn Bè <span id="friend-invite-badge" class="invite-badge hidden">0</span></button>
                     <button id="logout-btn" class="dropdown-item">🚪 Đăng Xuất</button>
                 </div>
             </div>
@@ -124,6 +138,33 @@
         </div>
     </div>
 
+    <!-- Friends Modal -->
+    <div id="friends-modal" class="modal-backdrop hidden">
+        <div class="modal-content glassmorphism friends-modal-content">
+            <h2 class="modal-title">👥 Bạn Bè</h2>
+            <div class="friends-tabs">
+                <button class="friends-tab is-active" data-tab="friends">Danh sách</button>
+                <button class="friends-tab" data-tab="add">Thêm bạn</button>
+                <button class="friends-tab" data-tab="invites">Lời mời <span id="friends-invite-tab-badge" class="invite-badge hidden">0</span></button>
+            </div>
+            <div id="friends-panel" class="friends-panel">
+                <input type="text" id="friend-search-input" placeholder="Tìm bạn theo tên hiển thị..." class="friends-search">
+                <button id="friend-search-btn" class="cyber-button ripple">🔍 Tìm</button>
+                <div id="friend-search-results" class="friend-list custom-scrollbar"></div>
+            </div>
+            <div id="add-friend-panel" class="friends-panel hidden">
+                <p class="friend-hint">Nhập đúng tên hiển thị của người chơi để gửi lời mời kết bạn.</p>
+                <input type="text" id="add-friend-input" placeholder="Tên hiển thị" class="friends-search">
+                <button id="add-friend-btn" class="cyber-button ripple">➕ Gửi lời mời</button>
+                <div id="add-friend-result" class="friend-hint"></div>
+            </div>
+            <div id="invites-panel" class="friends-panel hidden">
+                <div id="invites-list" class="friend-list custom-scrollbar"></div>
+            </div>
+            <button id="close-friends-modal-btn" class="cyber-button ripple">Đóng</button>
+        </div>
+    </div>
+
     <main id="game-container" class="game-container hidden">
         <!-- Host Caller Panel -->
         <section id="caller-panel" class="panel glassmorphism">
@@ -132,7 +173,10 @@
                 <div class="room-code-wrapper">
                     Mã Phòng: <span id="game-room-code"></span>
                 </div>
-                <button id="leave-room-btn" class="cyber-button ripple small-btn">Rời Phòng</button>
+                <div class="room-info-actions">
+                    <button id="leave-room-btn" class="cyber-button ripple small-btn">Rời Phòng</button>
+                    <button id="game-logout-btn" class="cyber-button ripple small-btn logout-btn">🚪 Đăng Xuất</button>
+                </div>
             </div>
             <div class="caller-display">
                 <div class="sphere-container">
