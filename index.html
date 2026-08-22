@@ -200,6 +200,9 @@
                 </div>
                 <button id="chat-toggle-btn" class="chat-icon-btn" title="Thu gọn">▾</button>
             </div>
+            <div id="voice-participants" class="voice-participants">
+                <!-- Các avatar người đang bật mic sẽ hiển thị ở đây -->
+            </div>
             <div id="chat-messages" class="chat-messages custom-scrollbar"></div>
             <div id="chat-emoji-popup" class="chat-emoji-popup hidden">
                 <button class="emoji-btn">😀</button>
@@ -223,6 +226,10 @@
             </div>
             <form id="chat-form" class="chat-form">
                 <button type="button" id="chat-emoji-btn" class="chat-emoji-trigger" title="Emoji">😊</button>
+                <button type="button" id="chat-voice-btn" class="chat-voice-trigger" title="Bật/tắt mic" aria-pressed="false">
+                    <span class="voice-icon">🎙️</span>
+                    <span class="voice-state">Off</span>
+                </button>
                 <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." maxlength="200" autocomplete="off">
                 <button type="submit" id="chat-send-btn" class="chat-send-btn" title="Gửi">➤</button>
             </form>

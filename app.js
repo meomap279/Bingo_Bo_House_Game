@@ -90,6 +90,8 @@ const DOMElements = {
     chatSendBtn: document.getElementById('chat-send-btn'),
     chatEmojiBtn: document.getElementById('chat-emoji-btn'),
     chatEmojiPopup: document.getElementById('chat-emoji-popup'),
+    chatVoiceBtn: document.getElementById('chat-voice-btn'),
+    voiceParticipants: document.getElementById('voice-participants'),
     // In-Game Info
     gameRoomInfo: document.getElementById('game-room-info'),
     gameRoomCode: document.getElementById('game-room-code'),
@@ -671,6 +673,267 @@ function stopChatListener() {
     }
 }
 
+/* ===== Voice Chat (WebRTC mesh) ===== */
+
+const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+const voiceState = {
+    localStream: null,
+    isMicOn: false,
+    peers: {}, // peerId -> { pc, audio }
+    listeningPeers: {}, // peerId chưa gửi offer (để biết khi nào cần gửi)
+};
+
+function setVoiceButton(isOn) {
+    if (!DOMElements.chatVoiceBtn) return;
+    DOMElements.chatVoiceBtn.classList.toggle('is-on', !!isOn);
+    DOMElements.chatVoiceBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+    const stateEl = DOMElements.chatVoiceBtn.querySelector('.voice-state');
+    if (stateEl) stateEl.textContent = isOn ? 'Đang nói' : 'Off';
+}
+
+function renderVoiceParticipants(peerIds, players) {
+    if (!DOMElements.voiceParticipants) return;
+    DOMElements.voiceParticipants.innerHTML = '';
+    peerIds.forEach(pid => {
+        const player = players && players[pid];
+        const item = document.createElement('span');
+        item.className = 'voice-participant';
+        const avatar = (player && player.photoURL) || DEFAULT_AVATAR;
+        item.innerHTML = `<img src="${avatar}" alt=""> ${player ? (player.displayName || 'Người chơi') : 'Người chơi'}`;
+        DOMElements.voiceParticipants.appendChild(item);
+    });
+}
+
+async function startLocalMic() {
+    if (voiceState.localStream) return voiceState.localStream;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+            video: false,
+        });
+        voiceState.localStream = stream;
+        voiceState.isMicOn = true;
+        setVoiceButton(true);
+        return stream;
+    } catch (error) {
+        console.error('Cannot access microphone:', error);
+        alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
+        return null;
+    }
+}
+
+function stopLocalMic() {
+    if (voiceState.localStream) {
+        voiceState.localStream.getTracks().forEach(t => t.stop());
+        voiceState.localStream = null;
+    }
+    voiceState.isMicOn = false;
+    setVoiceButton(false);
+}
+
+function createPeerConnection(peerId) {
+    if (voiceState.peers[peerId] && voiceState.peers[peerId].pc) {
+        return voiceState.peers[peerId].pc;
+    }
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    voiceState.peers[peerId] = { pc, audio: null };
+
+    if (voiceState.localStream) {
+        voiceState.localStream.getTracks().forEach(track => {
+            pc.addTrack(track, voiceState.localStream);
+        });
+    }
+
+    pc.ontrack = (event) => {
+        const [stream] = event.streams;
+        const audio = new Audio();
+        audio.srcObject = stream;
+        audio.autoplay = true;
+        audio.play().catch(() => {});
+        voiceState.peers[peerId].audio = audio;
+    };
+
+    pc.onicecandidate = (event) => {
+        if (event.candidate && gameState.roomCode) {
+            database.ref(`rooms/${gameState.roomCode}/voice/${peerId}/${gameState.playerId}`).push({
+                type: 'candidate',
+                candidate: event.candidate.toJSON(),
+            });
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        const state = pc.connectionState;
+        if (state === 'failed' || state === 'closed' || state === 'disconnected') {
+            // Có thể cần reconnect sau này
+        }
+    };
+
+    return pc;
+}
+
+function sendSignal(toId, payload) {
+    if (!gameState.roomCode) return;
+    database.ref(`rooms/${gameState.roomCode}/voice/${toId}/${gameState.playerId}`).push(payload);
+}
+
+async function callPeer(peerId) {
+    if (!voiceState.isMicOn) return;
+    const pc = createPeerConnection(peerId);
+    try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        sendSignal(peerId, { type: 'offer', sdp: offer });
+    } catch (error) {
+        console.error('callPeer failed:', error);
+    }
+}
+
+async function handleOffer(fromId, sdp) {
+    const pc = createPeerConnection(fromId);
+    try {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        sendSignal(fromId, { type: 'answer', sdp: answer });
+        // Khi nhận offer từ người khác, ta cần stream của mình (nếu có) đã được add ở createPeerConnection
+        if (!voiceState.localStream && voiceState.isMicOn) {
+            // edge case: chưa có stream
+        }
+    } catch (error) {
+        console.error('handleOffer failed:', error);
+    }
+}
+
+async function handleAnswer(fromId, sdp) {
+    const peer = voiceState.peers[fromId];
+    if (!peer) return;
+    try {
+        await peer.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    } catch (error) {
+        console.error('handleAnswer failed:', error);
+    }
+}
+
+async function handleCandidate(fromId, candidate) {
+    const peer = voiceState.peers[fromId];
+    if (!peer) return;
+    try {
+        await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+        console.error('handleCandidate failed:', error);
+    }
+}
+
+function listenForVoiceSignals(roomCode) {
+    const myId = gameState.playerId;
+    if (!myId) return;
+    const ref = database.ref(`rooms/${roomCode}/voice/${myId}`);
+    ref.off();
+    ref.on('child_added', (snapshot) => {
+        const payload = snapshot.val();
+        const fromId = snapshot.key;
+        if (!payload || !fromId) return;
+        if (fromId === myId) return;
+        if (payload.type === 'offer') {
+            handleOffer(fromId, payload.sdp);
+        } else if (payload.type === 'answer') {
+            handleAnswer(fromId, payload.sdp);
+        } else if (payload.type === 'candidate') {
+            handleCandidate(fromId, payload.candidate);
+        }
+    });
+
+    // Khi có người mới bật mic → ta sẽ gửi offer đến họ
+    const presenceRef = database.ref(`rooms/${roomCode}/voice/${myId}/_presence`);
+    presenceRef.on('value', (snapshot) => {
+        const presence = snapshot.val() || {};
+        Object.keys(presence).forEach(peerId => {
+            if (peerId === myId) return;
+            const meta = presence[peerId];
+            if (!meta || !meta.micOn) return;
+            // Gửi offer nếu mình cũng đang bật mic và chưa có peer
+            if (voiceState.isMicOn && !voiceState.peers[peerId]) {
+                callPeer(peerId);
+            }
+        });
+    });
+}
+
+function publishMicState(isOn) {
+    if (!gameState.roomCode || !gameState.playerId) return;
+    const ref = database.ref(`rooms/${gameState.roomCode}/voice/${gameState.playerId}/_presence/${gameState.playerId}`);
+    ref.onDisconnect().remove();
+    ref.set({ micOn: !!isOn, at: firebase.database.ServerValue.TIMESTAMP });
+}
+
+function listenForVoicePresence(roomCode, players) {
+    if (!DOMElements.voiceParticipants) return;
+    const ref = database.ref(`rooms/${roomCode}/voice`);
+    ref.off();
+    ref.on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const speakers = [];
+        Object.entries(data).forEach(([peerId, info]) => {
+            // info có thể là { _presence: { micOn }, payload signals... }
+            const presence = info && info._presence && info._presence[peerId];
+            if (presence && presence.micOn) {
+                speakers.push(peerId);
+            }
+        });
+        renderVoiceParticipants(speakers, players || {});
+    });
+}
+
+async function toggleMicrophone() {
+    if (!gameState.roomCode) {
+        alert('Vui lòng vào phòng trước.');
+        return;
+    }
+    if (voiceState.isMicOn) {
+        stopLocalMic();
+        publishMicState(false);
+        // Đóng các peer connection cũ
+        Object.values(voiceState.peers).forEach(peer => {
+            try { peer.pc.close(); } catch (e) {}
+        });
+        voiceState.peers = {};
+        renderVoiceParticipants([], {});
+        return;
+    }
+    const stream = await startLocalMic();
+    if (!stream) return;
+    publishMicState(true);
+    // Sau khi mic bật, lắng nghe sự hiện diện của các peer khác
+    // Gọi tới những peer đang có micOn
+    if (!gameState.roomCode) return;
+    const otherPresence = database.ref(`rooms/${gameState.roomCode}/voice`);
+    const snap = await otherPresence.once('value');
+    const data = snap.val() || {};
+    Object.entries(data).forEach(([peerId, info]) => {
+        if (peerId === gameState.playerId) return;
+        const presence = info && info._presence && info._presence[peerId];
+        if (presence && presence.micOn) {
+            callPeer(peerId);
+        }
+    });
+}
+
+function cleanupVoice() {
+    stopLocalMic();
+    Object.values(voiceState.peers).forEach(peer => {
+        try { peer.pc.close(); } catch (e) {}
+    });
+    voiceState.peers = {};
+    if (gameState.roomCode) {
+        database.ref(`rooms/${gameState.roomCode}/voice/${gameState.playerId}`).off();
+        database.ref(`rooms/${gameState.roomCode}/voice`).off();
+        database.ref(`rooms/${gameState.roomCode}/voice/${gameState.playerId}/_presence/${gameState.playerId}`).remove();
+    }
+    if (DOMElements.voiceParticipants) DOMElements.voiceParticipants.innerHTML = '';
+    setVoiceButton(false);
+}
+
 function showMultiplayerModal() {
     DOMElements.mainModal.classList.add('visible');
     DOMElements.gameContainer.classList.add('hidden');
@@ -842,6 +1105,8 @@ async function createRoom() {
 
         listenForGameEvents(roomCode);
         listenForChatEvents(roomCode);
+        listenForVoiceSignals(roomCode);
+        listenForVoicePresence(roomCode, null);
         clearChatMessages();
         appendChatMessage({ isSystem: true, text: `Bạn đã vào phòng #${roomCode}` });
         openChatPanel();
@@ -902,6 +1167,8 @@ async function joinRoom() {
 
         listenForGameEvents(roomCode);
         listenForChatEvents(roomCode);
+        listenForVoiceSignals(roomCode);
+        listenForVoicePresence(roomCode, null);
         clearChatMessages();
         appendChatMessage({ isSystem: true, text: `Bạn đã vào phòng #${roomCode}` });
         openChatPanel();
@@ -963,6 +1230,7 @@ async function handleLeaveRoom() {
 }
 
 function cleanUpAfterLeave(roomCode) {
+    cleanupVoice();
     if (roomCode) {
         database.ref('rooms/' + roomCode).off();
         database.ref(`rooms/${roomCode}/chat`).off();
@@ -1000,6 +1268,8 @@ async function rejoinRoom(roomCode) {
 
             listenForGameEvents(roomCode);
             listenForChatEvents(roomCode);
+            listenForVoiceSignals(roomCode);
+            listenForVoicePresence(roomCode, null);
             clearChatMessages();
             appendChatMessage({ isSystem: true, text: `Bạn đã vào phòng #${roomCode}` });
             openChatPanel();
@@ -1450,6 +1720,19 @@ function listenForGameEvents(roomCode) {
             DOMElements.gameRoomCode.textContent = gameState.roomCode;
             DOMElements.playerListContainer.classList.remove('hidden');
             renderPlayerList(players);
+            // Refresh danh sách người đang nói (tên/avatar) khi players thay đổi
+            if (DOMElements.voiceParticipants && gameState.roomCode) {
+                const ref = database.ref(`rooms/${gameState.roomCode}/voice`);
+                ref.once('value', (snap) => {
+                    const data = snap.val() || {};
+                    const speakers = [];
+                    Object.entries(data).forEach(([peerId, info]) => {
+                        const presence = info && info._presence && info._presence[peerId];
+                        if (presence && presence.micOn) speakers.push(peerId);
+                    });
+                    renderVoiceParticipants(speakers, players);
+                });
+            }
         }
 
         // Update Lobby UI
@@ -2007,6 +2290,11 @@ if (DOMElements.chatEmojiBtn) {
     DOMElements.chatEmojiBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         toggleChatEmojiPopup();
+    });
+}
+if (DOMElements.chatVoiceBtn) {
+    DOMElements.chatVoiceBtn.addEventListener('click', () => {
+        toggleMicrophone();
     });
 }
 document.querySelectorAll('#chat-emoji-popup .emoji-btn').forEach(btn => {

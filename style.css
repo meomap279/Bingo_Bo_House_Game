@@ -1414,6 +1414,78 @@ select,
     outline: none;
 }
 
+.chat-voice-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    flex: 0 0 auto;
+    height: 2.4rem;
+    padding: 0 0.7rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(0, 0, 0, 0.32);
+    color: var(--color-text-light);
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.chat-voice-trigger:hover,
+.chat-voice-trigger:focus-visible {
+    background: rgba(0, 242, 254, 0.18);
+    border-color: color-mix(in srgb, var(--theme-primary) 70%, white);
+    outline: none;
+}
+
+.chat-voice-trigger.is-on {
+    background: linear-gradient(135deg, #45e08f, #00f2fe);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-dark);
+    box-shadow: 0 0 16px color-mix(in srgb, #45e08f 60%, transparent);
+}
+
+.chat-voice-trigger .voice-icon {
+    font-size: 1.05rem;
+}
+
+.voice-participants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    min-height: 0;
+}
+
+.voice-participant {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+    border-radius: 999px;
+    background: rgba(69, 224, 143, 0.18);
+    border: 1px solid rgba(69, 224, 143, 0.35);
+    color: var(--color-text-light);
+    font-size: 0.78rem;
+}
+
+.voice-participant img {
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 8px rgba(69, 224, 143, 0.6);
+    animation: voice-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(69, 224, 143, 0.5); }
+    50% { box-shadow: 0 0 16px rgba(69, 224, 143, 0.9); }
+}
+
 .chat-form {
     display: flex;
     gap: 0.4rem;
