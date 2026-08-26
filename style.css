@@ -901,6 +901,43 @@ select.cyber-select option {
     to { stroke-dashoffset: 0; }
 }
 
+/* Turn timer (15s per turn) */
+#turn-timer-container {
+    width: min(100%, 22rem);
+    height: 0.55rem;
+    margin: 0.6rem auto 0;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.32);
+    position: relative;
+}
+#turn-timer-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--theme-secondary), var(--theme-primary));
+    opacity: 0.18;
+}
+#turn-timer-bar {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--theme-primary), var(--color-success-green));
+    border-radius: 999px;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--theme-primary) 60%, transparent);
+    transition: width 0.18s linear;
+    position: relative;
+    z-index: 1;
+}
+#turn-timer-container.is-warning #turn-timer-bar {
+    background: linear-gradient(90deg, var(--theme-accent), var(--color-pink));
+    animation: timer-warn 0.6s ease-in-out infinite;
+}
+@keyframes timer-warn {
+    0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--theme-accent) 60%, transparent); }
+    50% { box-shadow: 0 0 22px color-mix(in srgb, var(--color-pink) 80%, transparent); }
+}
+
 .game-status {
     text-align: center;
     font-size: clamp(0.95rem, 2vw, 1.15rem);
